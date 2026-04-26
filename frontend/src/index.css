@@ -211,6 +211,17 @@ body {
   overflow-anchor: none;
 }
 
+.entry-list-viewport {
+  overflow-x: hidden !important;
+}
+
+.entry-list-viewport>div {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+}
+
 @keyframes dropdown-in {
   from {
     opacity: 0;

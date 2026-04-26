@@ -74,7 +74,7 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
       <div
         ref={ref}
         className={cn(
-          'px-4 py-3 cursor-pointer transition-colors',
+          'w-full min-w-0 overflow-hidden px-4 py-3 cursor-pointer transition-colors',
           'hover:bg-item-hover',
           isSelected && 'bg-item-active',
           !entry.read && !isSelected && 'bg-accent/5'

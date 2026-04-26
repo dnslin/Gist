@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEntriesInfinite, useUnreadCounts } from '@/hooks/useEntries'
 import { useFeeds } from '@/hooks/useFeeds'
 import { useFolders } from '@/hooks/useFolders'
@@ -18,11 +17,9 @@ import { translateArticlesBatch, cancelAllBatchTranslations } from '@/services/t
 import { translationActions } from '@/stores/translation-store'
 import {
   selectionScrollKey,
-  entryListMeasurementsCache,
   entryListScrollPositions,
 } from './scroll-key'
 import { useScrollToTop } from '@/hooks/useScrollToTop'
-import { estimateEntryListItemHeight } from './entry-list-height'
 import type { Entry, Feed, Folder, ContentType } from '@/types/api'
 
 interface EntryListProps {
@@ -39,8 +36,6 @@ interface EntryListProps {
   onToggleSidebar?: () => void
   sidebarVisible?: boolean
 }
-
-const ESTIMATED_ITEM_HEIGHT = 100
 
 export function EntryList({
   selection,
@@ -96,9 +91,8 @@ export function EntryList({
   // Save/restore scroll position per selection+contentType
   const scrollKey = selectionScrollKey(selection, contentType)
 
-  // Restore scroll position on same-mount key change (e.g., article -> notification).
-  // On remount (e.g., returning from picture mode), the virtualizer's own
-  // _willUpdate handles restoration via initialOffset.
+  // Restore scroll position on same-mount key change (e.g., article -> notification)
+  // and remount (e.g., returning from picture mode).
   useLayoutEffect(() => {
     const node = containerRef.current
     if (!node) return
@@ -131,19 +125,30 @@ export function EntryList({
     }
   }, [])
 
+  const maybeFetchNextPage = useCallback(() => {
+    const node = containerRef.current
+    if (!node || !hasNextPage || isFetchingNextPage) return
+
+    const distanceToBottom = node.scrollHeight - node.scrollTop - node.clientHeight
+    if (distanceToBottom <= 600) {
+      fetchNextPage()
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage])
+
   useEffect(() => {
     const node = containerRef.current
     if (!node) return
 
     const handleScroll = () => {
       entryListScrollPositions.set(scrollKey, node.scrollTop)
+      maybeFetchNextPage()
     }
 
     node.addEventListener('scroll', handleScroll, { passive: true })
     return () => {
       node.removeEventListener('scroll', handleScroll)
     }
-  }, [scrollKey])
+  }, [maybeFetchNextPage, scrollKey])
 
   // Cancel pending translations and reset state when list changes
   useEffect(() => {
@@ -190,55 +195,10 @@ export function EntryList({
   }, [folders])
 
   const entries = useMemo(() => flattenUniqueEntries(data?.pages), [data])
-  const entryIdsKey = useMemo(() => entries.map((entry) => entry.id).join(':'), [entries])
-  const estimatedItemSizes = useMemo(
-    () => entries.map((entry) => estimateEntryListItemHeight(entry, containerWidth)),
-    [entries, containerWidth]
-  )
-  const initialMeasurementsCache = useMemo(() => {
-    const snapshot = entryListMeasurementsCache.get(scrollKey)
-    if (!snapshot) {
-      return []
-    }
-
-    return snapshot.entryIdsKey === entryIdsKey ? snapshot.measurements : []
-  }, [scrollKey, entryIdsKey])
-
-  const virtualizer = useVirtualizer({
-    count: entries.length,
-    getScrollElement: () => containerRef.current,
-    estimateSize: (index) => estimatedItemSizes[index] ?? ESTIMATED_ITEM_HEIGHT,
-    overscan: 5,
-    // Restore offset on remount (only used on first mount)
-    initialOffset: entryListScrollPositions.get(scrollKey),
-    initialMeasurementsCache,
-    onChange: (instance) => {
-      if (entryIdsKey.length === 0) {
-        entryListMeasurementsCache.delete(scrollKey)
-        return
-      }
-
-      entryListMeasurementsCache.set(scrollKey, {
-        entryIdsKey,
-        measurements: instance.measurementsCache,
-      })
-    },
-  })
-
-  const virtualItems = virtualizer.getVirtualItems()
 
   useEffect(() => {
-    virtualizer.measure()
-  }, [virtualizer, estimatedItemSizes])
-
-  useEffect(() => {
-    const lastItem = virtualItems.at(-1)
-    if (!lastItem) return
-
-    if (lastItem.index >= entries.length - 5 && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage()
-    }
-  }, [virtualItems, entries.length, hasNextPage, isFetchingNextPage, fetchNextPage])
+    maybeFetchNextPage()
+  }, [entries.length, maybeFetchNextPage])
 
   // Function to trigger batch translation for pending entries
   const triggerBatchTranslation = useCallback(() => {
@@ -326,27 +286,48 @@ export function EntryList({
     [autoTranslate, targetLanguage, queueEntryForTranslation]
   )
 
-  // Trigger translation for visible items and selected entry
+  // Trigger translation for real visible items and selected entry
   useEffect(() => {
     if (!autoTranslate) return
 
-    const visibleEntryIds = new Set<string>()
-    for (const virtualRow of virtualItems) {
-      const entry = entries[virtualRow.index]
-      if (entry) {
-        visibleEntryIds.add(entry.id)
+    const node = containerRef.current
+    if (!node || typeof IntersectionObserver === 'undefined') {
+      for (const entry of entries.slice(0, 20)) {
         scheduleTranslation(entry)
       }
+      return
     }
 
-    // Selected entry may be outside the visible range, still needs translation
-    if (selectedEntryId && !visibleEntryIds.has(selectedEntryId)) {
+    const observer = new IntersectionObserver(
+      (items) => {
+        for (const item of items) {
+          if (!item.isIntersecting) continue
+
+          const index = Number((item.target as HTMLElement).dataset.index)
+          const entry = entries[index]
+          if (entry) {
+            scheduleTranslation(entry)
+          }
+        }
+      },
+      { root: node, rootMargin: '200px 0px' }
+    )
+
+    for (const item of node.querySelectorAll<HTMLElement>('[data-index]')) {
+      observer.observe(item)
+    }
+
+    if (selectedEntryId) {
       const selectedEntry = entries.find((e) => e.id === selectedEntryId)
       if (selectedEntry) {
         scheduleTranslation(selectedEntry)
       }
     }
-  }, [virtualItems, entries, autoTranslate, scheduleTranslation, selectedEntryId])
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [entries, autoTranslate, scheduleTranslation, selectedEntryId])
 
   const title = useMemo(() => {
     switch (selection.type) {
@@ -409,41 +390,27 @@ export function EntryList({
       <ScrollAreaPrimitive.Root className="relative min-h-0 flex-1 overflow-hidden">
         <ScrollAreaPrimitive.Viewport
           ref={containerRef}
-          className="h-full w-full rounded-[inherit] overscroll-y-contain [overflow-anchor:none]"
+          className="entry-list-viewport h-full w-full rounded-[inherit] overscroll-y-contain [overflow-anchor:none]"
         >
           {isLoading ? (
             <EntryListSkeleton />
           ) : entries.length === 0 ? (
             <EntryListEmpty />
           ) : (
-            <div
-              className="relative w-full"
-              style={{ height: virtualizer.getTotalSize() }}
-            >
-              <div
-                style={{
-                  transform: `translateY(${virtualItems[0]?.start ?? 0}px)`,
-                }}
-              >
-                {virtualItems.map((virtualRow) => {
-                  const entry = entries[virtualRow.index]
-                  if (!entry) return null
-
-                  return (
-                    <EntryListItem
-                      key={entry.id}
-                      data-index={virtualRow.index}
-                      entry={entry}
-                      feed={feedsMap.get(entry.feedId)}
-                      containerWidth={containerWidth}
-                      isSelected={entry.id === selectedEntryId}
-                      onClick={() => onSelectEntry(entry.id)}
-                      autoTranslate={autoTranslate}
-                      targetLanguage={targetLanguage}
-                    />
-                  )
-                })}
-              </div>
+            <div className="w-full">
+              {entries.map((entry, index) => (
+                <EntryListItem
+                  key={entry.id}
+                  data-index={index}
+                  entry={entry}
+                  feed={feedsMap.get(entry.feedId)}
+                  containerWidth={containerWidth}
+                  isSelected={entry.id === selectedEntryId}
+                  onClick={() => onSelectEntry(entry.id)}
+                  autoTranslate={autoTranslate}
+                  targetLanguage={targetLanguage}
+                />
+              ))}
             </div>
           )}
 

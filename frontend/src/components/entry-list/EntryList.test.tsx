@@ -1,20 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, cleanup, act } from '@testing-library/react'
+import { render, cleanup, act, fireEvent, screen } from '@testing-library/react'
 import type { Entry } from '@/types/api'
 
 const {
-  mockGetVirtualItems,
-  mockMeasure,
-  mockUseVirtualizer,
   mockRenderedEntryListItem,
   mockNeedsTranslation,
   mockTranslateArticlesBatch,
   mockCancelAllBatchTranslations,
   mockTranslationActionsGet,
 } = vi.hoisted(() => ({
-  mockGetVirtualItems: vi.fn(),
-  mockMeasure: vi.fn(),
-  mockUseVirtualizer: vi.fn(),
   mockRenderedEntryListItem: vi.fn(),
   mockNeedsTranslation: vi.fn(() => Promise.resolve(true)),
   mockTranslateArticlesBatch: vi.fn(() => Promise.resolve()),
@@ -25,18 +19,6 @@ const {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
-}))
-
-vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: (options: unknown) => {
-    mockUseVirtualizer(options)
-    return {
-      getVirtualItems: mockGetVirtualItems,
-      measure: mockMeasure,
-      getTotalSize: () => 500,
-      measurementsCache: [],
-    }
-  },
 }))
 
 vi.mock('@/hooks/useEntries', () => ({
@@ -80,12 +62,18 @@ vi.mock('@/stores/translation-store', () => ({
   },
 }))
 
-vi.mock('./EntryListItem', () => ({
-  EntryListItem: ({ entry }: { entry: Entry }) => {
-    mockRenderedEntryListItem(entry.id)
-    return null
-  },
-}))
+vi.mock('./EntryListItem', async () => {
+  const { forwardRef } = await import('react')
+
+  return {
+    EntryListItem: forwardRef<HTMLDivElement, { entry: Entry; 'data-index'?: number }>(
+      function MockEntryListItem({ entry, 'data-index': dataIndex }, ref) {
+        mockRenderedEntryListItem(entry.id)
+        return <div ref={ref} data-index={dataIndex} />
+      }
+    ),
+  }
+})
 
 vi.mock('./EntryListHeader', () => ({
   EntryListHeader: () => null,
@@ -96,7 +84,7 @@ vi.mock('@radix-ui/react-scroll-area', async () => {
   return {
     Root: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     Viewport: forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-      (props, ref) => <div ref={ref} {...props} />,
+      (props, ref) => <div ref={ref} data-testid="entry-list-viewport" {...props} />,
     ),
     Corner: () => null,
   }
@@ -109,7 +97,6 @@ vi.mock('@/components/ui/scroll-area', () => ({
 import { EntryList } from './EntryList'
 import { useEntriesInfinite } from '@/hooks/useEntries'
 import { useAISettings } from '@/hooks/useAISettings'
-import { entryListMeasurementsCache, selectionScrollKey } from './scroll-key'
 
 function makeEntry(id: string): Entry {
   return {
@@ -125,11 +112,6 @@ function makeEntry(id: string): Entry {
 }
 
 const allEntries = ['1', '2', '3', '4', '5'].map(makeEntry)
-
-const visibleVirtualItems = [
-  { index: 0, start: 0, size: 100, end: 100, lane: 0, key: 0 },
-  { index: 1, start: 100, size: 100, end: 200, lane: 0, key: 1 },
-]
 
 const defaultProps = {
   selection: { type: 'all' as const },
@@ -156,17 +138,41 @@ async function runBatchTimer() {
 }
 
 describe('EntryList translation scheduling', () => {
+  let originalIntersectionObserver: typeof IntersectionObserver | undefined
+
   beforeEach(() => {
     vi.useFakeTimers()
     vi.clearAllMocks()
 
-    mockGetVirtualItems.mockReturnValue(visibleVirtualItems)
-    mockMeasure.mockReset()
-    mockUseVirtualizer.mockReset()
     mockRenderedEntryListItem.mockReset()
     mockNeedsTranslation.mockResolvedValue(true)
     mockTranslationActionsGet.mockReturnValue(undefined)
-    entryListMeasurementsCache.clear()
+
+    originalIntersectionObserver = globalThis.IntersectionObserver
+    globalThis.IntersectionObserver = class {
+      private callback: IntersectionObserverCallback
+
+      constructor(callback: IntersectionObserverCallback) {
+        this.callback = callback
+      }
+
+      observe = (target: Element) => {
+        const index = Number((target as HTMLElement).dataset.index)
+        if (index <= 1) {
+          this.callback(
+            [{ isIntersecting: true, target } as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver
+          )
+        }
+      }
+
+      disconnect = vi.fn()
+      unobserve = vi.fn()
+      takeRecords = () => []
+      root = null
+      rootMargin = ''
+      thresholds = []
+    } as unknown as typeof IntersectionObserver
 
     vi.mocked(useEntriesInfinite).mockReturnValue({
       data: { pages: [{ entries: allEntries, hasMore: false }] },
@@ -185,6 +191,7 @@ describe('EntryList translation scheduling', () => {
 
   afterEach(() => {
     cleanup()
+    globalThis.IntersectionObserver = originalIntersectionObserver!
     vi.useRealTimers()
   })
 
@@ -264,26 +271,6 @@ describe('EntryList translation scheduling', () => {
     expect(ids).toContain('3')
   })
 
-  it('会向虚拟列表恢复匹配当前条目集的测量缓存', () => {
-    const scrollKey = selectionScrollKey(defaultProps.selection, defaultProps.contentType)
-    const cachedMeasurements = [
-      { index: 0, start: 0, end: 96, size: 96, key: '0', lane: 0 },
-      { index: 1, start: 96, end: 202, size: 106, key: '1', lane: 0 },
-    ]
-
-    entryListMeasurementsCache.set(scrollKey, {
-      entryIdsKey: allEntries.map((entry) => entry.id).join(':'),
-      measurements: cachedMeasurements,
-    })
-
-    render(<EntryList {...defaultProps} />)
-
-    expect(mockUseVirtualizer).toHaveBeenCalled()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const options = mockUseVirtualizer.mock.calls.at(-1)?.[0] as any
-    expect(options.initialMeasurementsCache).toEqual(cachedMeasurements)
-  })
-
   it('已成功翻译的文章不会重复进入批量队列', async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(mockTranslationActionsGet as any).mockImplementation((id: string) => {
@@ -328,12 +315,6 @@ describe('EntryList translation scheduling', () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    mockGetVirtualItems.mockReturnValue([
-      { index: 0, start: 0, size: 100, end: 100, lane: 0, key: 0 },
-      { index: 1, start: 100, size: 100, end: 200, lane: 0, key: 1 },
-      { index: 2, start: 200, size: 100, end: 300, lane: 0, key: 2 },
-    ])
-
     render(<EntryList {...defaultProps} selectedEntryId={null} />)
 
     await runBatchTimer()
@@ -341,7 +322,38 @@ describe('EntryList translation scheduling', () => {
     expect(mockTranslateArticlesBatch).toHaveBeenCalledTimes(1)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const calledArticles = (mockTranslateArticlesBatch.mock.calls[0] as any[])[0] as Array<{ id: string }>
-    expect(calledArticles.map((article) => article.id)).toEqual(['1', '2', '3'])
+    expect(calledArticles.map((article) => article.id)).toEqual(['1', '2'])
+  })
+
+  it('滚动接近底部时加载下一页', () => {
+    const fetchNextPage = vi.fn()
+    vi.mocked(useEntriesInfinite).mockReturnValue({
+      data: { pages: [{ entries: allEntries, hasMore: true }] },
+      fetchNextPage,
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+
+    render(<EntryList {...defaultProps} />)
+
+    const viewport = screen.getByTestId('entry-list-viewport')
+    Object.defineProperties(viewport, {
+      scrollHeight: { configurable: true, value: 2000 },
+      clientHeight: { configurable: true, value: 1000 },
+      scrollTop: { configurable: true, value: 500 },
+    })
+
+    fireEvent.scroll(viewport)
+
+    expect(fetchNextPage).toHaveBeenCalled()
+  })
+
+  it('列表滚动容器使用受控 viewport，避免 Radix 内部 table wrapper 被长文本撑宽', () => {
+    render(<EntryList {...defaultProps} />)
+
+    expect(screen.getByTestId('entry-list-viewport').className).toContain('entry-list-viewport')
   })
 
   it('渲染列表时也会去重重复文章', () => {
@@ -358,12 +370,6 @@ describe('EntryList translation scheduling', () => {
       isLoading: false,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
-
-    mockGetVirtualItems.mockReturnValue([
-      { index: 0, start: 0, size: 100, end: 100, lane: 0, key: 0 },
-      { index: 1, start: 100, size: 100, end: 200, lane: 0, key: 1 },
-      { index: 2, start: 200, size: 100, end: 300, lane: 0, key: 2 },
-    ])
 
     render(<EntryList {...defaultProps} selectedEntryId={null} />)
 
