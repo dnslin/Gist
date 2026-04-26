@@ -3,7 +3,6 @@ import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCodeHighlight } from '@/hooks/useCodeHighlight'
 import { useEntryMeta } from '@/hooks/useEntryMeta'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { isSafeUrl } from '@/lib/url'
 import { ArticleContent } from '@/components/ui/article-content'
 import type { ArticleContentBlock } from '@/components/ui/article-content'
@@ -49,11 +48,9 @@ export function EntryContentBody({
   const hasContent = hasBlocks || (!!displayContent && displayContent.trim().length > 0)
 
   return (
-    <ScrollArea
+    <div
       ref={scrollRef}
-      className="flex-1"
-      scrollbarClassName="mt-12"
-      viewportClassName="entry-content-viewport"
+      className="entry-content-viewport flex-1 overflow-y-auto [overflow-anchor:none]"
     >
       <article className="entry-content mx-auto w-full max-w-[clamp(45ch,60vw,65ch)] min-w-0 overflow-x-hidden px-4 sm:px-6 pb-20 pt-16">
         <header className="mb-4 space-y-5">
@@ -121,6 +118,6 @@ export function EntryContentBody({
         </div>
       </article>
       {scrollNode && <BackToTopButton scrollNode={scrollNode} />}
-    </ScrollArea>
+    </div>
   )
 }

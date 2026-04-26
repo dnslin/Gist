@@ -8,8 +8,6 @@ import { useSwipeGesture } from '@/hooks/useSwipeGesture'
 import { selectionToParams, type SelectionType } from '@/hooks/useSelection'
 import { flattenUniqueEntries } from '@/lib/entry-pagination'
 import { stripHtml } from '@/lib/html-utils'
-import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area'
-import { ScrollBar } from '@/components/ui/scroll-area'
 import { EntryListItem } from './EntryListItem'
 import { EntryListHeader } from './EntryListHeader'
 import { needsTranslation as needsTranslationAsync } from '@/lib/language-detect-async'
@@ -387,10 +385,11 @@ export function EntryList({
         sidebarVisible={sidebarVisible}
       />
 
-      <ScrollAreaPrimitive.Root className="relative min-h-0 flex-1 overflow-hidden">
-        <ScrollAreaPrimitive.Viewport
+      <div className="relative min-h-0 flex-1 overflow-hidden">
+        <div
           ref={containerRef}
-          className="entry-list-viewport h-full w-full rounded-[inherit] overscroll-y-contain [overflow-anchor:none]"
+          data-testid="entry-list-viewport"
+          className="h-full w-full overflow-x-hidden overflow-y-auto rounded-[inherit] overscroll-y-contain [overflow-anchor:none]"
         >
           {isLoading ? (
             <EntryListSkeleton />
@@ -415,10 +414,8 @@ export function EntryList({
           )}
 
           {isFetchingNextPage && <LoadingMore />}
-        </ScrollAreaPrimitive.Viewport>
-        <ScrollBar />
-        <ScrollAreaPrimitive.Corner />
-      </ScrollAreaPrimitive.Root>
+        </div>
+      </div>
     </div>
   )
 }

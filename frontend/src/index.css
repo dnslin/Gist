@@ -94,7 +94,6 @@
   --sidebar-foreground: 240 4.8% 95.9%;
   --item-active: color-mix(in oklch, hsl(var(--foreground)) 15%, transparent);
   --item-hover: color-mix(in oklch, hsl(var(--foreground)) 10%, transparent);
-  scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
 }
 
 * {
@@ -205,21 +204,6 @@ body {
 
 .dropdown-content[data-state='closed'] {
   animation: dropdown-out 120ms ease;
-}
-
-.entry-content-viewport {
-  overflow-anchor: none;
-}
-
-.entry-list-viewport {
-  overflow-x: hidden !important;
-}
-
-.entry-list-viewport>div {
-  display: block !important;
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
 }
 
 @keyframes dropdown-in {
@@ -484,11 +468,6 @@ body {
   background: hsl(var(--primary));
 }
 
-/* Fix for Radix UI ScrollArea viewport forcing table display which expands width */
-.entry-content-viewport>div {
-  display: block !important;
-}
-
 /* Table wrapper - isolate layout calculation to prevent iOS Safari crash */
 .entry-content .prose .article-table-wrapper {
   /* iOS 16+: isolate layout and paint to prevent tables from affecting outer layout */
@@ -514,37 +493,4 @@ body {
 .dark .entry-content .prose pre.shiki span {
   color: var(--shiki-dark);
   background-color: transparent;
-}
-
-/* Scrollbar */
-:root {
-  scrollbar-color: hsl(var(--border)) transparent;
-  scrollbar-width: thin;
-}
-
-*::-webkit-scrollbar {
-  width: 4px !important;
-  height: 4px !important;
-  background: transparent;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
-  border-radius: 9999px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
-}
-
-.dark *::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.3);
-}
-
-.dark *::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--muted-foreground) / 0.5);
-}
-
-*::-webkit-scrollbar-corner {
-  background: transparent;
 }

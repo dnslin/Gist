@@ -79,21 +79,6 @@ vi.mock('./EntryListHeader', () => ({
   EntryListHeader: () => null,
 }))
 
-vi.mock('@radix-ui/react-scroll-area', async () => {
-  const { forwardRef } = await import('react')
-  return {
-    Root: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-    Viewport: forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-      (props, ref) => <div ref={ref} data-testid="entry-list-viewport" {...props} />,
-    ),
-    Corner: () => null,
-  }
-})
-
-vi.mock('@/components/ui/scroll-area', () => ({
-  ScrollBar: () => null,
-}))
-
 import { EntryList } from './EntryList'
 import { useEntriesInfinite } from '@/hooks/useEntries'
 import { useAISettings } from '@/hooks/useAISettings'
@@ -350,10 +335,12 @@ describe('EntryList translation scheduling', () => {
     expect(fetchNextPage).toHaveBeenCalled()
   })
 
-  it('列表滚动容器使用受控 viewport，避免 Radix 内部 table wrapper 被长文本撑宽', () => {
+  it('列表滚动容器使用系统原生滚动条', () => {
     render(<EntryList {...defaultProps} />)
 
-    expect(screen.getByTestId('entry-list-viewport').className).toContain('entry-list-viewport')
+    const viewport = screen.getByTestId('entry-list-viewport')
+    expect(viewport.className).toContain('overflow-y-auto')
+    expect(viewport.className).toContain('overflow-x-hidden')
   })
 
   it('渲染列表时也会去重重复文章', () => {
