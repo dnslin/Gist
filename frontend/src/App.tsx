@@ -35,7 +35,7 @@ const LazyEntryContent = lazy(async () => {
 function LoadingScreen() {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center overflow-x-clip bg-background">
+    <div className="flex h-full w-full items-center justify-center overflow-x-clip bg-background">
       <div className="flex flex-col items-center gap-4">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
         <p className="text-sm text-muted-foreground">{t('entry.loading')}</p>
@@ -261,7 +261,7 @@ function AuthenticatedApp() {
   if (location === '/') {
     // 等待 appearanceSettings 加载完成再跳转，避免先跳 article 再跳正确类型
     if (isAppearanceLoading) {
-      return <div className="h-dvh bg-background" />
+      return <div className="h-full bg-background" />
     }
     const defaultType = visibleContentTypes[0] ?? 'article'
     return <Redirect to={`/all?type=${defaultType}`} replace />
@@ -269,7 +269,7 @@ function AuthenticatedApp() {
 
   // 等待 appearanceSettings 加载完成，避免显示默认三视图的闪烁
   if (isAppearanceLoading) {
-    return <div className="h-dvh bg-background" />
+    return <div className="h-full bg-background" />
   }
 
   // Sidebar component (shared between mobile and desktop)
@@ -293,13 +293,13 @@ function AuthenticatedApp() {
 
     if (isAddFeedPath(location)) {
       mobileContent = (
-        <div className="h-dvh safe-area-top">
+        <div className="h-full safe-area-top">
           <AddFeedPage onClose={handleCloseAddFeed} contentType={addFeedContentType} />
         </div>
       )
     } else if (contentType === 'picture') {
       mobileContent = (
-        <div className="h-dvh flex flex-col overflow-hidden safe-area-top">
+        <div className="h-full flex flex-col overflow-hidden safe-area-top">
           <PictureMasonry
             selection={selection}
             contentType={contentType}
@@ -314,7 +314,7 @@ function AuthenticatedApp() {
     } else {
       // List and detail views rendered together, controlled by CSS
       mobileContent = (
-        <div className="relative h-dvh w-screen max-w-full overflow-hidden">
+        <div className="relative h-full w-screen max-w-full overflow-hidden">
           {/* List view - always rendered to preserve scroll position */}
           <div className={cn(
             'absolute inset-0 flex flex-col overflow-hidden bg-background safe-area-top',
@@ -477,12 +477,14 @@ function AppContent() {
 
 function App() {
   return (
-    <TooltipProvider delayDuration={300}>
-      <Router>
-        <AppContent />
-        <UpdateNotice />
-      </Router>
-    </TooltipProvider>
+    <div className="app-shell">
+      <TooltipProvider delayDuration={300}>
+        <Router>
+          <AppContent />
+          <UpdateNotice />
+        </Router>
+      </TooltipProvider>
+    </div>
   )
 }
 

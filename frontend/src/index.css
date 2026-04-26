@@ -70,6 +70,12 @@
   --duration-sidebar-collapse: 220ms;
 }
 
+@media (display-mode: standalone) {
+  :root {
+    --app-dvh: 100lvh;
+  }
+}
+
 .dark {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
@@ -103,11 +109,11 @@
 html {
   /* Prevent pinch-to-zoom and browser default swipe navigation */
   touch-action: pan-x pan-y;
-  overscroll-behavior-x: none;
+  overscroll-behavior: none;
   background-color: theme(colors.background);
   width: 100%;
-  min-height: var(--app-dvh);
-  overflow-x: clip;
+  height: var(--app-dvh);
+  overflow: hidden;
 }
 
 body {
@@ -115,25 +121,27 @@ body {
   color: theme(colors.foreground);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   width: 100%;
-  min-height: var(--app-dvh);
+  height: var(--app-dvh);
   margin: 0;
-  overflow-x: clip;
+  overflow: hidden;
 }
 
 #root {
   width: 100%;
-  min-height: var(--app-dvh);
-  overflow-x: clip;
+  height: var(--app-dvh);
+  overflow: hidden;
   background-color: theme(colors.background);
 }
 
-/* Dynamic viewport height for mobile browsers */
-.h-dvh {
-  height: var(--app-dvh);
+.app-shell {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: theme(colors.background);
 }
 
-.min-h-dvh {
-  min-height: var(--app-dvh);
+.h-dvh {
+  height: var(--app-dvh);
 }
 
 /* PWA Safe Area Support - utility classes for components that need safe area padding */
