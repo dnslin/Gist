@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEntriesInfinite, useUnreadCounts } from '@/hooks/useEntries'
 import { useFeeds } from '@/hooks/useFeeds'
@@ -64,7 +64,6 @@ export function EntryList({
   const { data: unreadCounts } = useUnreadCounts()
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useEntriesInfinite({ ...params, unreadOnly })
-  const [containerWidth, setContainerWidth] = useState(0)
 
   // Swipe gesture: Right swipe opens sidebar (only on mobile)
   useSwipeGesture(listWrapperRef, {
@@ -98,46 +97,6 @@ export function EntryList({
     const saved = entryListScrollPositions.get(scrollKey)
     node.scrollTop = saved ?? 0
   }, [scrollKey])
-
-  useLayoutEffect(() => {
-    const node = containerRef.current
-    if (!node) return
-
-    let frameId: number | null = null
-
-    const updateWidth = () => {
-      const nextWidth = node.clientWidth
-      setContainerWidth((currentWidth) => (
-        currentWidth === nextWidth ? currentWidth : nextWidth
-      ))
-    }
-
-    updateWidth()
-
-    if (typeof ResizeObserver === 'undefined') {
-      return
-    }
-
-    const scheduleWidthUpdate = () => {
-      if (frameId !== null) return
-      frameId = requestAnimationFrame(() => {
-        frameId = null
-        updateWidth()
-      })
-    }
-
-    const observer = new ResizeObserver(() => {
-      scheduleWidthUpdate()
-    })
-    observer.observe(node)
-
-    return () => {
-      observer.disconnect()
-      if (frameId !== null) {
-        cancelAnimationFrame(frameId)
-      }
-    }
-  }, [])
 
   const maybeFetchNextPage = useCallback(() => {
     const node = containerRef.current
@@ -419,7 +378,6 @@ export function EntryList({
                   data-index={index}
                   entry={entry}
                   feed={feedsMap.get(entry.feedId)}
-                  containerWidth={containerWidth}
                   isSelected={entry.id === selectedEntryId}
                   onClick={() => onSelectEntry(entry.id)}
                   autoTranslate={autoTranslate}

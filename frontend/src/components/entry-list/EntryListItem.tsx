@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { formatRelativeTime } from '@/lib/date-utils'
 import { stripHtml } from '@/lib/html-utils'
-import { buildInlineMetaText } from '@/lib/text-truncate'
 import { useTranslationStore } from '@/stores/translation-store'
 import { FeedIcon } from '@/components/ui/feed-icon'
 import type { Entry, Feed } from '@/types/api'
@@ -11,7 +10,6 @@ import type { Entry, Feed } from '@/types/api'
 interface EntryListItemProps {
   entry: Entry
   feed?: Feed
-  containerWidth?: number
   isSelected: boolean
   onClick: () => void
   autoTranslate?: boolean
@@ -25,7 +23,6 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
     {
       entry,
       feed,
-      containerWidth,
       isSelected,
       onClick,
       autoTranslate,
@@ -35,40 +32,27 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
     },
     ref
   ) {
-  const { t } = useTranslation()
-  const publishedAt = entry.publishedAt ? formatRelativeTime(entry.publishedAt, t) : null
-  const [iconError, setIconError] = useState(false)
-  const showIcon = feed?.iconPath && !iconError
-  const fallbackTitle = t('entry.untitled')
-  const fallbackFeedName = t('entry.unknown_feed')
-  const metaTextMaxWidth =
-    containerWidth && Number.isFinite(containerWidth)
-      ? Math.max(Math.floor(containerWidth) - 32 - 16 - 6, 1)
-      : null
+    const { t } = useTranslation()
+    const publishedAt = entry.publishedAt ? formatRelativeTime(entry.publishedAt, t) : null
+    const [iconError, setIconError] = useState(false)
+    const showIcon = feed?.iconPath && !iconError
+    const fallbackTitle = t('entry.untitled')
+    const fallbackFeedName = t('entry.unknown_feed')
 
-
-    // Get translation from store
     const translation = useTranslationStore((state) =>
       autoTranslate && targetLanguage
         ? state.getTranslation(entry.id, targetLanguage)
         : undefined
     )
 
-    // Cache stripped HTML to avoid DOMParser on every render
     const strippedContent = useMemo(
       () => (entry.content ? stripHtml(entry.content).slice(0, 150) : null),
       [entry.content]
     )
 
-    // Use translated content if available
     const displayTitle = translation?.title ?? entry.title
     const displaySummary = translation?.summary ?? strippedContent
     const displayFeedName = feed?.title || fallbackFeedName
-    const inlineMetaText = metaTextMaxWidth
-      ? buildInlineMetaText(displayFeedName, publishedAt, metaTextMaxWidth)
-      : publishedAt
-        ? `${displayFeedName} · ${publishedAt}`
-        : displayFeedName
 
     return (
       <div
@@ -95,7 +79,13 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
           ) : (
             <FeedIcon className="size-4 shrink-0 text-muted-foreground/50" />
           )}
-          <span className="block min-w-0 flex-1 truncate">{inlineMetaText}</span>
+          <span className="block min-w-0 truncate">{displayFeedName}</span>
+          {publishedAt && (
+            <>
+              <span className="shrink-0 text-muted-foreground/50">·</span>
+              <span className="shrink-0 whitespace-nowrap">{publishedAt}</span>
+            </>
+          )}
         </div>
 
         {/* Line 2: title */}
