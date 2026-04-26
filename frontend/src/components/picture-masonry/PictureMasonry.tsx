@@ -10,7 +10,8 @@ import { flattenUniqueEntries } from '@/lib/entry-pagination'
 import { useImageDimensionsStore } from '@/stores/image-dimensions-store'
 import { PictureItem } from './PictureItem'
 import { EntryListHeader } from '@/components/entry-list/EntryListHeader'
-import type { ContentType, Feed } from '@/types/api'
+import { buildMasonryColumns } from './masonry-columns'
+import type { ContentType, Entry, Feed } from '@/types/api'
 
 interface PictureMasonryProps {
   selection: SelectionType
@@ -106,6 +107,10 @@ export function PictureMasonry({
   }, [folders])
 
   const entries = useMemo(() => flattenUniqueEntries(data?.pages), [data])
+  const masonryColumns = useMemo(
+    () => buildMasonryColumns<Entry>(entries, currentColumn),
+    [entries, currentColumn]
+  )
 
   const filterKey = useMemo(
     () => `${getSelectionKey(selection)}-${unreadOnly}`,
@@ -217,14 +222,20 @@ export function PictureMasonry({
         ) : isReady ? (
           <div
             key={filterKey}
+            className="grid gap-2 sm:gap-3"
             style={{
-              columnCount: currentColumn,
-              columnGap: '1rem',
+              gridTemplateColumns: `repeat(${currentColumn}, minmax(0, 1fr))`,
             }}
           >
-            {entries.map((entry) => (
-              <div key={entry.id} className="mb-4 break-inside-avoid">
-                <PictureItem entry={entry} feed={feedsMap.get(entry.feedId)} />
+            {masonryColumns.map((column, columnIndex) => (
+              <div key={columnIndex} className="flex min-w-0 flex-col gap-2 sm:gap-3">
+                {column.map((entry) => (
+                  <PictureItem
+                    key={entry.id}
+                    entry={entry}
+                    feed={feedsMap.get(entry.feedId)}
+                  />
+                ))}
               </div>
             ))}
           </div>
@@ -237,7 +248,7 @@ export function PictureMasonry({
 
 function MasonrySkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {Array.from({ length: 12 }, (_, i) => (
         <div key={i} className="animate-pulse">
           <div
