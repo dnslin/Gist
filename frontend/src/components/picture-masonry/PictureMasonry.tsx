@@ -1,5 +1,6 @@
 import { useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { VirtuosoMasonry } from '@virtuoso.dev/masonry'
 import { useEntriesInfinite, useUnreadCounts } from '@/hooks/useEntries'
 import { useFeeds } from '@/hooks/useFeeds'
 import { useFolders } from '@/hooks/useFolders'
@@ -10,7 +11,6 @@ import { flattenUniqueEntries } from '@/lib/entry-pagination'
 import { useImageDimensionsStore } from '@/stores/image-dimensions-store'
 import { PictureItem } from './PictureItem'
 import { EntryListHeader } from '@/components/entry-list/EntryListHeader'
-import { buildMasonryColumns } from './masonry-columns'
 import type { ContentType, Entry, Feed } from '@/types/api'
 
 interface PictureMasonryProps {
@@ -26,6 +26,11 @@ interface PictureMasonryProps {
   sidebarVisible?: boolean
 }
 
+interface MasonryItem {
+  entry: Entry
+  feed?: Feed
+}
+
 function getSelectionKey(selection: SelectionType): string {
   switch (selection.type) {
     case 'feed':
@@ -36,6 +41,21 @@ function getSelectionKey(selection: SelectionType): string {
     case 'starred':
       return selection.type
   }
+}
+
+function findScrollableElement(root: HTMLElement | null): HTMLElement | null {
+  if (!root) return null
+
+  const candidates = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))]
+  return candidates.find((element) => {
+    const { overflowY } = getComputedStyle(element)
+    return overflowY === 'auto' || overflowY === 'scroll'
+  }) ?? null
+}
+
+function MasonryItemContent({ data: item }: { data: MasonryItem }) {
+  if (!item?.entry) return null
+  return <PictureItem entry={item.entry} feed={item.feed} />
 }
 
 export function PictureMasonry({
@@ -69,7 +89,7 @@ export function PictureMasonry({
     const handler = (e: Event) => {
       const eventScope = (e as CustomEvent<string | undefined>).detail
       if (eventScope && eventScope !== 'picture') return
-      const container = scrollContainerRef.current
+      const container = findScrollableElement(scrollContainerRef.current)
       if (!container) return
       container.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -107,10 +127,6 @@ export function PictureMasonry({
   }, [folders])
 
   const entries = useMemo(() => flattenUniqueEntries(data?.pages), [data])
-  const masonryColumns = useMemo(
-    () => buildMasonryColumns<Entry>(entries, currentColumn),
-    [entries, currentColumn]
-  )
 
   const filterKey = useMemo(
     () => `${getSelectionKey(selection)}-${unreadOnly}`,
@@ -133,28 +149,59 @@ export function PictureMasonry({
     }
   }, [entries, loadFromDB])
 
-  // Infinite scroll by listening to the native masonry scroll container
+  const items: MasonryItem[] = useMemo(
+    () => entries.map((entry) => ({
+      entry,
+      feed: feedsMap.get(entry.feedId),
+    })),
+    [entries, feedsMap]
+  )
+
+  // Infinite scroll by listening to VirtuosoMasonry's internal scroll container.
   useEffect(() => {
-    const scrollEl = scrollContainerRef.current
-    if (!scrollEl || !isReady) return
+    const wrapper = scrollContainerRef.current
+    if (!wrapper || !isReady) return
+
+    let scrollEl: HTMLElement | null = null
+    let observer: MutationObserver | null = null
 
     const handleScroll = () => {
+      if (!scrollEl) return
       const { scrollTop, scrollHeight, clientHeight } = scrollEl
       if (scrollHeight - scrollTop - clientHeight < 300 && hasNextPage && !isFetchingNextPage) {
         fetchNextPage()
       }
     }
 
-    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
+    const setupScrollListener = () => {
+      const nextScrollEl = findScrollableElement(wrapper)
+      if (!nextScrollEl || nextScrollEl === scrollEl) return Boolean(scrollEl)
+
+      scrollEl?.removeEventListener('scroll', handleScroll)
+      scrollEl = nextScrollEl
+      scrollEl.addEventListener('scroll', handleScroll, { passive: true })
+      return true
+    }
+
+    if (!setupScrollListener()) {
+      observer = new MutationObserver(() => {
+        if (setupScrollListener() && observer) {
+          observer.disconnect()
+          observer = null
+        }
+      })
+      observer.observe(wrapper, { childList: true, subtree: true })
+    }
 
     return () => {
-      scrollEl.removeEventListener('scroll', handleScroll)
+      observer?.disconnect()
+      scrollEl?.removeEventListener('scroll', handleScroll)
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, isReady])
 
   // Reset scroll on selection/filter change
   useEffect(() => {
-    const scrollEl = scrollContainerRef.current
+    const scrollEl = findScrollableElement(scrollContainerRef.current)
     if (!scrollEl) return
     scrollEl.scrollTop = 0
   }, [selection, unreadOnly])
@@ -209,36 +256,24 @@ export function PictureMasonry({
 
       <div
         ref={scrollContainerRef}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 [overflow-anchor:none]"
+        className="min-h-0 flex-1 overflow-hidden [overflow-anchor:none]"
       >
         {isLoading ? (
-          <div className="h-full">
+          <div className="h-full overflow-auto p-4">
             <MasonrySkeleton />
           </div>
         ) : entries.length === 0 ? (
-          <div className="h-full">
+          <div className="h-full overflow-auto p-4">
             <EmptyState />
           </div>
         ) : isReady ? (
-          <div
+          <VirtuosoMasonry
             key={filterKey}
-            className="grid gap-2 sm:gap-3"
-            style={{
-              gridTemplateColumns: `repeat(${currentColumn}, minmax(0, 1fr))`,
-            }}
-          >
-            {masonryColumns.map((column, columnIndex) => (
-              <div key={columnIndex} className="flex min-w-0 flex-col gap-2 sm:gap-3">
-                {column.map((entry) => (
-                  <PictureItem
-                    key={entry.id}
-                    entry={entry}
-                    feed={feedsMap.get(entry.feedId)}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+            data={items}
+            columnCount={currentColumn}
+            ItemContent={MasonryItemContent}
+            className="h-full p-4"
+          />
         ) : null}
         {isFetchingNextPage && <LoadingMore />}
       </div>
