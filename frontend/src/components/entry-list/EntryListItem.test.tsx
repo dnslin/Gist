@@ -69,4 +69,28 @@ describe('EntryListItem', () => {
     expect(publishedAt.className).toContain('shrink-0')
     expect(publishedAt.className).toContain('whitespace-nowrap')
   })
+
+  it('allows URL previews to wrap instead of clipping horizontally', () => {
+    render(
+      <EntryListItem
+        entry={{
+          ...entry,
+          title: '重复下载:\nhttps://haloshell.halocloudnet.com/download',
+          content:
+            '<p>HaloCloud 通知频道（链接：https://haloshell.halocloudnet.com/download）</p>',
+        }}
+        feed={feed}
+        isSelected={false}
+        onClick={vi.fn()}
+      />
+    )
+
+    const title = screen.getByText(/重复下载/)
+    const summary = screen.getByText(/HaloCloud 通知频道/)
+
+    expect(title.className).toContain('wrap-anywhere')
+    expect(title.className).toContain('line-clamp-3')
+    expect(summary.className).toContain('wrap-anywhere')
+    expect(summary.className).toContain('line-clamp-3')
+  })
 })

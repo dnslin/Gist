@@ -7,6 +7,8 @@ import { useTranslationStore } from '@/stores/translation-store'
 import { FeedIcon } from '@/components/ui/feed-icon'
 import type { Entry, Feed } from '@/types/api'
 
+const URL_PATTERN = /\bhttps?:\/\/\S+/i
+
 interface EntryListItemProps {
   entry: Entry
   feed?: Feed
@@ -53,6 +55,8 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
     const displayTitle = translation?.title ?? entry.title
     const displaySummary = translation?.summary ?? strippedContent
     const displayFeedName = feed?.title || fallbackFeedName
+    const titleContainsUrl = URL_PATTERN.test(displayTitle ?? '')
+    const summaryContainsUrl = URL_PATTERN.test(displaySummary ?? '')
 
     return (
       <div
@@ -91,7 +95,8 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
         {/* Line 2: title */}
         <div
           className={cn(
-            'mt-1 text-sm line-clamp-2',
+            'mt-1 text-sm wrap-anywhere',
+            titleContainsUrl ? 'line-clamp-3' : 'line-clamp-2',
             !entry.read ? 'font-semibold' : 'font-medium text-muted-foreground'
           )}
         >
@@ -100,7 +105,12 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
 
         {/* Line 3: summary */}
         {displaySummary && (
-          <div className="mt-1 text-xs text-muted-foreground line-clamp-2">
+          <div
+            className={cn(
+              'mt-1 text-xs text-muted-foreground wrap-anywhere',
+              summaryContainsUrl ? 'line-clamp-3' : 'line-clamp-2'
+            )}
+          >
             {displaySummary}
           </div>
         )}
