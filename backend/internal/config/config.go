@@ -7,7 +7,7 @@ import (
 
 const (
 	AppName    = "Gist"
-	AppVersion = "1.0.0"
+	AppVersion = "1.2.0"
 	AppRepo    = "https://github.com/9bingyin/Gist"
 )
 
