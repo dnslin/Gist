@@ -335,6 +335,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/internal_handler.errorResponse"
                         }
                     },
+                    "502": {
+                        "description": "Bad Gateway",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    },
                     "504": {
                         "description": "Gateway Timeout",
                         "schema": {

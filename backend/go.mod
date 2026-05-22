@@ -7,6 +7,7 @@ require (
 	github.com/Noooste/azuretls-client v1.12.12
 	github.com/anthropics/anthropic-sdk-go v1.27.1
 	github.com/bwmarrin/snowflake v0.3.0
+	github.com/gabriel-vasile/mimetype v1.4.13
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/labstack/echo/v4 v4.15.1
