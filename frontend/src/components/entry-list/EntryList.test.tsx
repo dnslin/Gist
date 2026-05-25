@@ -435,6 +435,36 @@ describe('EntryList translation scheduling', () => {
     )
   })
 
+  it('滚动标已读底部填充使用滚动容器高度', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    const previousClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
+
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
+      configurable: true,
+      get() {
+        return this instanceof HTMLElement && this.dataset.testid === 'entry-list-viewport' ? 240 : 0
+      },
+    })
+
+    render(<EntryList {...defaultProps} />)
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    const viewport = screen.getByTestId('entry-list-viewport')
+    const spacer = viewport.querySelector('[aria-hidden="true"]') as HTMLElement | null
+    expect(spacer?.style.height).toBe('240px')
+
+    if (previousClientHeight) {
+      Object.defineProperty(HTMLElement.prototype, 'clientHeight', previousClientHeight)
+    } else {
+      delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight
+    }
+  })
+
   it('列表数据变化后的静默窗口内不会滚动标已读', async () => {
     vi.mocked(useGeneralSettings).mockReturnValue({
       data: { markReadOnScroll: true },
