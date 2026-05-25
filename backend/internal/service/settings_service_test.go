@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"errors"
 	"gist/backend/internal/service"
 	"testing"
 
@@ -89,6 +90,7 @@ func TestSettingsService_GeneralSettings(t *testing.T) {
 	err := svc.SetGeneralSettings(context.Background(), &service.GeneralSettings{
 		FallbackUserAgent: "UA-Test",
 		AutoReadability:   true,
+		MarkReadOnScroll:  true,
 	})
 	require.NoError(t, err)
 
@@ -96,9 +98,26 @@ func TestSettingsService_GeneralSettings(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "UA-Test", settings.FallbackUserAgent)
 	require.True(t, settings.AutoReadability)
+	require.True(t, settings.MarkReadOnScroll)
+	require.Equal(t, "true", repo.data[service.KeyMarkReadOnScroll])
 
 	ua := svc.GetFallbackUserAgent(context.Background())
 	require.Equal(t, "UA-Test", ua)
+}
+
+func TestSettingsService_GeneralSettings_SetManyErrorIsAtomic(t *testing.T) {
+	repo := newSettingsRepoStub()
+	svc := service.NewSettingsService(repo, ai.NewRateLimiter(0))
+
+	repo.setErr[service.KeyMarkReadOnScroll] = errors.New("write failed")
+
+	err := svc.SetGeneralSettings(context.Background(), &service.GeneralSettings{
+		FallbackUserAgent: "UA-Test",
+		AutoReadability:   true,
+		MarkReadOnScroll:  true,
+	})
+	require.Error(t, err)
+	require.Empty(t, repo.data)
 }
 
 func TestSettingsService_ClearAnubisCookies(t *testing.T) {

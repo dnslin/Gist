@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useMemo, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useRef, useMemo, useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useEntriesInfinite, useUnreadCounts } from '@/hooks/useEntries'
+import { useEntriesInfinite, useMarkManyAsRead, useRemoveFromUnreadList, useUnreadCounts } from '@/hooks/useEntries'
 import { useFeeds } from '@/hooks/useFeeds'
 import { useFolders } from '@/hooks/useFolders'
 import { useAISettings } from '@/hooks/useAISettings'
+import { useGeneralSettings } from '@/hooks/useGeneralSettings'
 import { useSwipeGesture } from '@/hooks/useSwipeGesture'
 import { selectionToParams, type SelectionType } from '@/hooks/useSelection'
 import { flattenUniqueEntries } from '@/lib/entry-pagination'
@@ -19,6 +20,9 @@ import {
 } from './scroll-key'
 import { useScrollToTop } from '@/hooks/useScrollToTop'
 import type { Entry, Feed, Folder, ContentType } from '@/types/api'
+
+const MARK_READ_ON_SCROLL_BATCH_DELAY_MS = 200
+const MARK_READ_ON_SCROLL_GRACE_MS = 1000
 
 interface EntryListProps {
   selection: SelectionType
@@ -61,7 +65,10 @@ export function EntryList({
   const { data: feeds = [] } = useFeeds()
   const { data: folders = [] } = useFolders()
   const { data: aiSettings } = useAISettings()
+  const { data: generalSettings } = useGeneralSettings()
   const { data: unreadCounts } = useUnreadCounts()
+  const { mutate: markManyAsRead } = useMarkManyAsRead()
+  const removeFromUnreadList = useRemoveFromUnreadList()
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useEntriesInfinite({ ...params, unreadOnly })
 
@@ -81,9 +88,18 @@ export function EntryList({
   const pendingDetection = useRef(new Set<string>())
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const translationSession = useRef(0)
+  const scrollSeenEntryIds = useRef(new Set<string>())
+  const scrollMarkedReadIds = useRef(new Set<string>())
+  const scrollPendingReadEntries = useRef(new Map<string, number>())
+  const scrollBatchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollSession = useRef(0)
+  const scrollGraceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollGraceUntil = useRef(0)
+  const [scrollObserverVersion, setScrollObserverVersion] = useState(0)
 
   const autoTranslate = aiSettings?.autoTranslate ?? false
   const targetLanguage = aiSettings?.summaryLanguage ?? 'zh-CN'
+  const markReadOnScroll = generalSettings?.markReadOnScroll ?? false
 
   // Save/restore scroll position per selection+contentType
   const scrollKey = selectionScrollKey(selection, contentType)
@@ -136,7 +152,20 @@ export function EntryList({
       clearTimeout(debounceTimer.current)
       debounceTimer.current = null
     }
-  }, [selection, contentType])
+    scrollSeenEntryIds.current.clear()
+    scrollMarkedReadIds.current.clear()
+    scrollPendingReadEntries.current.clear()
+    scrollSession.current += 1
+    if (scrollBatchTimer.current) {
+      clearTimeout(scrollBatchTimer.current)
+      scrollBatchTimer.current = null
+    }
+    if (scrollGraceTimer.current) {
+      clearTimeout(scrollGraceTimer.current)
+      scrollGraceTimer.current = null
+    }
+  }, [selection, contentType, unreadOnly, markReadOnScroll])
+
 
   useEffect(() => {
     const pendingDetectionEntries = pendingDetection.current
@@ -147,6 +176,14 @@ export function EntryList({
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current)
         debounceTimer.current = null
+      }
+      if (scrollBatchTimer.current) {
+        clearTimeout(scrollBatchTimer.current)
+        scrollBatchTimer.current = null
+      }
+      if (scrollGraceTimer.current) {
+        clearTimeout(scrollGraceTimer.current)
+        scrollGraceTimer.current = null
       }
     }
   }, [])
@@ -168,10 +205,133 @@ export function EntryList({
   }, [folders])
 
   const entries = useMemo(() => flattenUniqueEntries(data?.pages), [data])
+  const entriesIdentityKey = useMemo(() => entries.map((entry) => entry.id).join('\u0000'), [entries])
+
+  useEffect(() => {
+    if (!markReadOnScroll) return
+
+    scrollSeenEntryIds.current.clear()
+    scrollGraceUntil.current = Date.now() + MARK_READ_ON_SCROLL_GRACE_MS
+    if (scrollGraceTimer.current) {
+      clearTimeout(scrollGraceTimer.current)
+    }
+    scrollGraceTimer.current = setTimeout(() => {
+      scrollGraceTimer.current = null
+      setScrollObserverVersion((version) => version + 1)
+    }, MARK_READ_ON_SCROLL_GRACE_MS)
+
+    return () => {
+      if (scrollGraceTimer.current) {
+        clearTimeout(scrollGraceTimer.current)
+        scrollGraceTimer.current = null
+      }
+    }
+  }, [entriesIdentityKey, markReadOnScroll])
 
   useEffect(() => {
     maybeFetchNextPage()
   }, [entries.length, maybeFetchNextPage])
+
+  const flushScrollReadQueue = useCallback(() => {
+    if (scrollBatchTimer.current) {
+      clearTimeout(scrollBatchTimer.current)
+      scrollBatchTimer.current = null
+    }
+
+    const pendingEntries = scrollPendingReadEntries.current
+    if (pendingEntries.size === 0) return
+
+    const node = containerRef.current
+    const ids = Array.from(pendingEntries.keys())
+    const removedHeight = Array.from(pendingEntries.values()).reduce((sum, height) => sum + height, 0)
+    const session = scrollSession.current
+    pendingEntries.clear()
+
+    markManyAsRead(
+      { ids, read: true, skipInvalidate: true },
+      {
+        onSuccess: () => {
+          if (!unreadOnly || scrollSession.current !== session) return
+
+          removeFromUnreadList(new Set(ids))
+
+          if (!node || removedHeight <= 0) return
+          requestAnimationFrame(() => {
+            if (scrollSession.current !== session || containerRef.current !== node) return
+            node.scrollTop = Math.max(0, node.scrollTop - removedHeight)
+          })
+        },
+        onError: () => {
+          for (const id of ids) {
+            scrollMarkedReadIds.current.delete(id)
+            scrollSeenEntryIds.current.delete(id)
+          }
+        },
+      }
+    )
+  }, [markManyAsRead, removeFromUnreadList, unreadOnly])
+
+  const queueScrollRead = useCallback((entryId: string, removedHeight: number) => {
+    if (!scrollPendingReadEntries.current.has(entryId)) {
+      scrollPendingReadEntries.current.set(entryId, removedHeight)
+    }
+    if (scrollBatchTimer.current) return
+
+    scrollBatchTimer.current = setTimeout(
+      flushScrollReadQueue,
+      MARK_READ_ON_SCROLL_BATCH_DELAY_MS
+    )
+  }, [flushScrollReadQueue])
+
+  useEffect(() => {
+    const node = containerRef.current
+    if (!markReadOnScroll || !node || typeof IntersectionObserver === 'undefined') return
+    if (Date.now() < scrollGraceUntil.current) return
+    const unreadIds = new Set(entries.filter((entry) => !entry.read).map((entry) => entry.id))
+    if (unreadIds.size === 0) return
+
+    const observer = new IntersectionObserver(
+      (items) => {
+        for (const item of items) {
+          if (Date.now() < scrollGraceUntil.current) continue
+          const target = item.target as HTMLElement
+          const entryId = target.dataset.entryId
+          if (!entryId || !unreadIds.has(entryId) || scrollMarkedReadIds.current.has(entryId)) continue
+
+          if (item.isIntersecting) {
+            scrollSeenEntryIds.current.add(entryId)
+            continue
+          }
+
+          const rootTop = item.rootBounds?.top ?? node.getBoundingClientRect().top
+          if (!scrollSeenEntryIds.current.has(entryId) || item.boundingClientRect.bottom > rootTop) {
+            continue
+          }
+
+          scrollMarkedReadIds.current.add(entryId)
+          const removedHeight = target.getBoundingClientRect().height || target.offsetHeight || 0
+          queueScrollRead(entryId, removedHeight)
+        }
+      },
+      { root: node, threshold: 0 }
+    )
+
+    const rootRect = node.getBoundingClientRect()
+    for (const item of node.querySelectorAll<HTMLElement>('[data-entry-id]')) {
+      const entryId = item.dataset.entryId
+      if (!entryId || !unreadIds.has(entryId) || scrollMarkedReadIds.current.has(entryId)) continue
+
+      const itemRect = item.getBoundingClientRect()
+      if (itemRect.bottom > rootRect.top && itemRect.top < rootRect.bottom) {
+        scrollSeenEntryIds.current.add(entryId)
+      }
+      observer.observe(item)
+    }
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [entries, markReadOnScroll, queueScrollRead, scrollObserverVersion])
 
   // Function to trigger batch translation for pending entries
   const triggerBatchTranslation = useCallback(() => {
@@ -376,6 +536,7 @@ export function EntryList({
                 <EntryListItem
                   key={entry.id}
                   data-index={index}
+                  data-entry-id={entry.id}
                   entry={entry}
                   feed={feedsMap.get(entry.feedId)}
                   isSelected={entry.id === selectedEntryId}
@@ -384,6 +545,9 @@ export function EntryList({
                   targetLanguage={targetLanguage}
                 />
               ))}
+              {markReadOnScroll && entries.length > 0 && !hasNextPage && (
+                <div aria-hidden="true" className="h-screen" />
+              )}
             </div>
           )}
 

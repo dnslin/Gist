@@ -39,6 +39,7 @@ export interface AITestResponse {
 export interface GeneralSettings {
   fallbackUserAgent: string;
   autoReadability: boolean;
+  markReadOnScroll: boolean;
 }
 
 export type ProxyType = 'http' | 'socks5';

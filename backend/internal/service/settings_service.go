@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"gist/backend/pkg/logger"
 	"gist/backend/internal/repository"
 	"gist/backend/internal/service/ai"
+	"gist/backend/pkg/logger"
 )
 
 // AISettings holds the AI configuration.
@@ -32,6 +32,7 @@ type AISettings struct {
 type GeneralSettings struct {
 	FallbackUserAgent string `json:"fallbackUserAgent"`
 	AutoReadability   bool   `json:"autoReadability"`
+	MarkReadOnScroll  bool   `json:"markReadOnScroll"`
 }
 
 // NetworkSettings holds network proxy configuration.
@@ -52,29 +53,29 @@ type AppearanceSettings struct {
 
 // Setting keys
 const (
-	keyAIProvider        = "ai.provider"
-	keyAIAPIKey          = "ai.api_key"
-	keyAIBaseURL         = "ai.base_url"
+	keyAIProvider          = "ai.provider"
+	keyAIAPIKey            = "ai.api_key"
+	keyAIBaseURL           = "ai.base_url"
 	keyAIModel             = "ai.model"
 	keyAIThinkingSupported = "ai.thinking_supported"
 	keyAIThinking          = "ai.thinking"
 	keyAIThinkingBudget    = "ai.thinking_budget"
-	keyAIReasoningEffort = "ai.reasoning_effort"
-	keyAISummaryLanguage = "ai.summary_language"
-	keyAIAutoTranslate   = "ai.auto_translate"
-	keyAIAutoSummary     = "ai.auto_summary"
-	keyAIRateLimit       = "ai.rate_limit"
+	keyAIReasoningEffort   = "ai.reasoning_effort"
+	keyAISummaryLanguage   = "ai.summary_language"
+	keyAIAutoTranslate     = "ai.auto_translate"
+	keyAIAutoSummary       = "ai.auto_summary"
+	keyAIRateLimit         = "ai.rate_limit"
 
 	keyFallbackUserAgent = "general.fallback_user_agent"
 	keyAutoReadability   = "general.auto_readability"
-
-	keyNetworkEnabled  = "network.proxy_enabled"
-	keyNetworkType     = "network.proxy_type"
-	keyNetworkHost     = "network.proxy_host"
-	keyNetworkPort     = "network.proxy_port"
-	keyNetworkUsername = "network.proxy_username"
-	keyNetworkPassword = "network.proxy_password"
-	keyNetworkIPStack  = "network.ip_stack"
+	keyMarkReadOnScroll  = "general.mark_read_on_scroll"
+	keyNetworkEnabled    = "network.proxy_enabled"
+	keyNetworkType       = "network.proxy_type"
+	keyNetworkHost       = "network.proxy_host"
+	keyNetworkPort       = "network.proxy_port"
+	keyNetworkUsername   = "network.proxy_username"
+	keyNetworkPassword   = "network.proxy_password"
+	keyNetworkIPStack    = "network.ip_stack"
 
 	keyAppearanceContentTypes = "appearance.content_types"
 )
@@ -365,25 +366,30 @@ func (s *settingsService) GetGeneralSettings(ctx context.Context) (*GeneralSetti
 		settings.FallbackUserAgent = val
 	}
 	settings.AutoReadability = s.getBool(ctx, keyAutoReadability)
-
+	settings.MarkReadOnScroll = s.getBool(ctx, keyMarkReadOnScroll)
 	return settings, nil
 }
 
 // SetGeneralSettings updates the general settings.
 func (s *settingsService) SetGeneralSettings(ctx context.Context, settings *GeneralSettings) error {
-	if err := s.repo.Set(ctx, keyFallbackUserAgent, settings.FallbackUserAgent); err != nil {
-		logger.Warn("general settings update fallback ua failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
-		return fmt.Errorf("set fallback user agent: %w", err)
-	}
 	autoReadabilityVal := "false"
 	if settings.AutoReadability {
 		autoReadabilityVal = "true"
 	}
-	if err := s.repo.Set(ctx, keyAutoReadability, autoReadabilityVal); err != nil {
-		logger.Warn("general settings update auto readability failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
-		return fmt.Errorf("set auto readability: %w", err)
+	markReadOnScrollVal := "false"
+	if settings.MarkReadOnScroll {
+		markReadOnScrollVal = "true"
 	}
-	logger.Info("general settings updated", "module", "service", "action", "update", "resource", "settings", "result", "ok", "auto_readability", settings.AutoReadability)
+
+	if err := s.repo.SetMany(ctx, map[string]string{
+		keyFallbackUserAgent: settings.FallbackUserAgent,
+		keyAutoReadability:   autoReadabilityVal,
+		keyMarkReadOnScroll:  markReadOnScrollVal,
+	}); err != nil {
+		logger.Warn("general settings update failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
+		return fmt.Errorf("set general settings: %w", err)
+	}
+	logger.Info("general settings updated", "module", "service", "action", "update", "resource", "settings", "result", "ok", "auto_readability", settings.AutoReadability, "mark_read_on_scroll", settings.MarkReadOnScroll)
 	return nil
 }
 

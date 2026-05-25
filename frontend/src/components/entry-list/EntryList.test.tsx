@@ -8,6 +8,8 @@ const {
   mockTranslateArticlesBatch,
   mockCancelAllBatchTranslations,
   mockTranslationActionsGet,
+  mockMarkManyAsRead,
+  mockRemoveFromUnreadList,
 } = vi.hoisted(() => ({
   mockRenderedEntryListItem: vi.fn(),
   mockNeedsTranslation: vi.fn(() => Promise.resolve(true)),
@@ -15,6 +17,8 @@ const {
   mockCancelAllBatchTranslations: vi.fn(),
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   mockTranslationActionsGet: vi.fn((): any => undefined),
+  mockMarkManyAsRead: vi.fn(),
+  mockRemoveFromUnreadList: vi.fn(),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -24,6 +28,8 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/hooks/useEntries', () => ({
   useEntriesInfinite: vi.fn(),
   useUnreadCounts: vi.fn(() => ({ data: undefined })),
+  useMarkManyAsRead: vi.fn(() => ({ mutate: mockMarkManyAsRead })),
+  useRemoveFromUnreadList: vi.fn(() => mockRemoveFromUnreadList),
 }))
 
 vi.mock('@/hooks/useFeeds', () => ({
@@ -36,6 +42,10 @@ vi.mock('@/hooks/useFolders', () => ({
 
 vi.mock('@/hooks/useAISettings', () => ({
   useAISettings: vi.fn(),
+}))
+
+vi.mock('@/hooks/useGeneralSettings', () => ({
+  useGeneralSettings: vi.fn(() => ({ data: { markReadOnScroll: false } })),
 }))
 
 vi.mock('@/hooks/useSelection', () => ({
@@ -66,10 +76,10 @@ vi.mock('./EntryListItem', async () => {
   const { forwardRef } = await import('react')
 
   return {
-    EntryListItem: forwardRef<HTMLDivElement, { entry: Entry; 'data-index'?: number }>(
-      function MockEntryListItem({ entry, 'data-index': dataIndex }, ref) {
+    EntryListItem: forwardRef<HTMLDivElement, { entry: Entry; 'data-index'?: number; 'data-entry-id'?: string }>(
+      function MockEntryListItem({ entry, 'data-index': dataIndex, 'data-entry-id': dataEntryId }, ref) {
         mockRenderedEntryListItem(entry.id)
-        return <div ref={ref} data-index={dataIndex} />
+        return <div ref={ref} data-index={dataIndex} data-entry-id={dataEntryId} />
       }
     ),
   }
@@ -82,6 +92,7 @@ vi.mock('./EntryListHeader', () => ({
 import { EntryList } from './EntryList'
 import { useEntriesInfinite } from '@/hooks/useEntries'
 import { useAISettings } from '@/hooks/useAISettings'
+import { useGeneralSettings } from '@/hooks/useGeneralSettings'
 
 function makeEntry(id: string): Entry {
   return {
@@ -122,6 +133,71 @@ async function runBatchTimer() {
   })
 }
 
+function installScrollMarkObserver({
+  leaveFromTop = true,
+  entryHeight = 40,
+}: {
+  leaveFromTop?: boolean
+  entryHeight?: number
+} = {}) {
+  globalThis.IntersectionObserver = class {
+    private callback: IntersectionObserverCallback
+
+    constructor(callback: IntersectionObserverCallback) {
+      this.callback = callback
+    }
+
+    observe = (target: Element) => {
+      const element = target as HTMLElement
+      if (!element.dataset.entryId) return
+
+      Object.defineProperty(element, 'offsetHeight', { configurable: true, value: entryHeight })
+      element.getBoundingClientRect = () => ({
+        x: 0,
+        y: leaveFromTop ? -entryHeight : 120,
+        width: 300,
+        height: entryHeight,
+        top: leaveFromTop ? -entryHeight : 120,
+        bottom: leaveFromTop ? 0 : 160,
+        left: 0,
+        right: 300,
+        toJSON: () => ({}),
+      })
+
+      this.callback(
+        [
+          { isIntersecting: true, target: element } as IntersectionObserverEntry,
+          {
+            isIntersecting: false,
+            target: element,
+            boundingClientRect: { bottom: leaveFromTop ? 0 : 160 },
+            rootBounds: { top: 10 },
+          } as IntersectionObserverEntry,
+        ],
+        this as unknown as IntersectionObserver
+      )
+    }
+
+    disconnect = vi.fn()
+    unobserve = vi.fn()
+    takeRecords = () => []
+    root = null
+    rootMargin = ''
+    thresholds = []
+  } as unknown as typeof IntersectionObserver
+}
+
+async function flushMarkReadBatch() {
+  await act(async () => {
+    vi.advanceTimersByTime(1000)
+    await Promise.resolve()
+  })
+  await act(async () => {
+    vi.advanceTimersByTime(200)
+    await Promise.resolve()
+  })
+}
+
 describe('EntryList translation scheduling', () => {
   let originalIntersectionObserver: typeof IntersectionObserver | undefined
 
@@ -132,6 +208,10 @@ describe('EntryList translation scheduling', () => {
     mockRenderedEntryListItem.mockReset()
     mockNeedsTranslation.mockResolvedValue(true)
     mockTranslationActionsGet.mockReturnValue(undefined)
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: false },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
 
     originalIntersectionObserver = globalThis.IntersectionObserver
     globalThis.IntersectionObserver = class {
@@ -333,6 +413,153 @@ describe('EntryList translation scheduling', () => {
     fireEvent.scroll(viewport)
 
     expect(fetchNextPage).toHaveBeenCalled()
+  })
+
+  it('开启滚动标已读后，条目滚出顶部时批量标为已读', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    installScrollMarkObserver()
+
+    render(<EntryList {...defaultProps} unreadOnly />)
+
+    await flushMarkReadBatch()
+
+    expect(mockMarkManyAsRead).toHaveBeenCalledWith(
+      { ids: ['1', '2', '3', '4', '5'], read: true, skipInvalidate: true },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function),
+      })
+    )
+  })
+
+  it('列表数据变化后的静默窗口内不会滚动标已读', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    installScrollMarkObserver()
+
+    render(<EntryList {...defaultProps} unreadOnly />)
+
+    await act(async () => {
+      vi.advanceTimersByTime(999)
+      await Promise.resolve()
+    })
+    expect(mockMarkManyAsRead).not.toHaveBeenCalled()
+
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+      await Promise.resolve()
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(200)
+      await Promise.resolve()
+    })
+
+    expect(mockMarkManyAsRead).toHaveBeenCalled()
+  })
+
+  it('关闭滚动标已读时不会触发标记', async () => {
+    installScrollMarkObserver()
+
+    render(<EntryList {...defaultProps} unreadOnly />)
+
+    await flushMarkReadBatch()
+
+    expect(mockMarkManyAsRead).not.toHaveBeenCalled()
+  })
+
+  it('已读条目不会被滚动标记', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    vi.mocked(useEntriesInfinite).mockReturnValue({
+      data: { pages: [{ entries: [{ ...makeEntry('1'), read: true }], hasMore: false }] },
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    installScrollMarkObserver()
+
+    render(<EntryList {...defaultProps} unreadOnly />)
+
+    await flushMarkReadBatch()
+
+    expect(mockMarkManyAsRead).not.toHaveBeenCalled()
+  })
+
+  it('条目从底部离开可视区时不会标为已读', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    installScrollMarkObserver({ leaveFromTop: false })
+
+    render(<EntryList {...defaultProps} unreadOnly />)
+
+    await flushMarkReadBatch()
+
+    expect(mockMarkManyAsRead).not.toHaveBeenCalled()
+  })
+
+  it('unreadOnly 移除已读项后会补偿 scrollTop', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    installScrollMarkObserver({ entryHeight: 40 })
+    const requestAnimationFrameMock = vi
+      .spyOn(globalThis, 'requestAnimationFrame')
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0)
+        return 1
+      })
+
+    render(<EntryList {...defaultProps} unreadOnly />)
+    const viewport = screen.getByTestId('entry-list-viewport')
+    Object.defineProperty(viewport, 'scrollTop', { configurable: true, writable: true, value: 200 })
+
+    await flushMarkReadBatch()
+
+    const firstCallOptions = mockMarkManyAsRead.mock.calls[0]?.[1] as { onSuccess?: () => void } | undefined
+    firstCallOptions?.onSuccess?.()
+
+    expect(mockRemoveFromUnreadList).toHaveBeenCalledWith(new Set(['1', '2', '3', '4', '5']))
+    expect(viewport.scrollTop).toBe(0)
+    requestAnimationFrameMock.mockRestore()
+  })
+
+  it('批量标记失败后允许后续重试', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    installScrollMarkObserver()
+
+    const { rerender } = render(<EntryList {...defaultProps} unreadOnly />)
+    await flushMarkReadBatch()
+
+    const firstCallOptions = mockMarkManyAsRead.mock.calls[0]?.[1] as { onError?: () => void } | undefined
+    firstCallOptions?.onError?.()
+
+    vi.mocked(useEntriesInfinite).mockReturnValue({
+      data: { pages: [{ entries: allEntries.map((entry) => ({ ...entry })), hasMore: false }] },
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    rerender(<EntryList {...defaultProps} unreadOnly selectedEntryId="1" />)
+    await flushMarkReadBatch()
+
+    expect(mockMarkManyAsRead).toHaveBeenCalledTimes(2)
   })
 
   it('列表滚动容器使用系统原生滚动条', () => {

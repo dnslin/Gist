@@ -34,6 +34,7 @@ const (
 	KeyAIAutoTranslate   = keyAIAutoTranslate
 	KeyAIAutoSummary     = keyAIAutoSummary
 	KeyAIRateLimit       = keyAIRateLimit
+	KeyMarkReadOnScroll  = keyMarkReadOnScroll
 	KeyNetworkEnabled    = keyNetworkEnabled
 	KeyNetworkType       = keyNetworkType
 	KeyNetworkHost       = keyNetworkHost

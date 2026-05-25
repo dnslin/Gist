@@ -730,6 +730,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/entries/read": {
+            "patch": {
+                "description": "Mark entries as read or unread by ID list",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "entries"
+                ],
+                "summary": "Update read status for entries",
+                "parameters": [
+                    {
+                        "description": "Read status for entries",
+                        "name": "read",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.updateManyReadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/entries/readability-cache": {
             "delete": {
                 "description": "Delete all extracted readable content from entries",
@@ -1813,7 +1850,7 @@ const docTemplate = `{
         },
         "/settings/general": {
             "get": {
-                "description": "Get general application settings including fallback user agent and auto readability",
+                "description": "Get general application settings including fallback user agent, auto readability, and mark-read-on-scroll",
                 "produces": [
                     "application/json"
                 ],
@@ -2586,6 +2623,9 @@ const docTemplate = `{
                 },
                 "fallbackUserAgent": {
                     "type": "string"
+                },
+                "markReadOnScroll": {
+                    "type": "boolean"
                 }
             }
         },
@@ -2597,6 +2637,9 @@ const docTemplate = `{
                 },
                 "fallbackUserAgent": {
                     "type": "string"
+                },
+                "markReadOnScroll": {
+                    "type": "boolean"
                 }
             }
         },
@@ -2871,6 +2914,20 @@ const docTemplate = `{
             "properties": {
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_handler.updateManyReadRequest": {
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "read": {
+                    "type": "boolean"
                 }
             }
         },

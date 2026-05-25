@@ -18,6 +18,7 @@ interface EntryListItemProps {
   targetLanguage?: string
   style?: React.CSSProperties
   'data-index'?: number
+  'data-entry-id'?: string
 }
 
 export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
@@ -31,6 +32,7 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
       targetLanguage,
       style,
       'data-index': dataIndex,
+      'data-entry-id': dataEntryId,
     },
     ref
   ) {
@@ -69,6 +71,7 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
         )}
         style={style}
         data-index={dataIndex}
+        data-entry-id={dataEntryId}
         onClick={onClick}
       >
         {/* Line 1: icon + feed name + time */}

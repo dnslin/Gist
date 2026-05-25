@@ -1,35 +1,42 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
-import { getGeneralSettings, updateGeneralSettings } from '@/api'
+import { updateGeneralSettings } from '@/api'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { SegmentedControl } from '@/components/ui/segmented-control'
+import { useGeneralSettings } from '@/hooks/useGeneralSettings'
 
 type Language = 'zh' | 'en'
 
 export function GeneralSettings() {
   const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
+  const { data: generalSettings, isLoading: isGeneralSettingsLoading } = useGeneralSettings()
   const [fallbackUA, setFallbackUA] = useState('')
   const [autoReadability, setAutoReadability] = useState(false)
+  const [markReadOnScroll, setMarkReadOnScroll] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
 
   useEffect(() => {
-    getGeneralSettings().then((settings) => {
-      setFallbackUA(settings.fallbackUserAgent || '')
-      setAutoReadability(settings.autoReadability || false)
-    }).catch(() => {
-      // ignore
-    })
-  }, [])
+    if (!generalSettings) return
+
+    setFallbackUA(generalSettings.fallbackUserAgent || '')
+    setAutoReadability(generalSettings.autoReadability || false)
+    setMarkReadOnScroll(generalSettings.markReadOnScroll || false)
+  }, [generalSettings])
+
+  const settingsDisabled = isGeneralSettingsLoading || !generalSettings
 
   const handleSaveFallbackUA = async () => {
+    if (!generalSettings) return
+
     setIsSaving(true)
     setSaveStatus('idle')
     try {
-      await updateGeneralSettings({ fallbackUserAgent: fallbackUA, autoReadability })
+      await updateGeneralSettings({ fallbackUserAgent: fallbackUA, autoReadability, markReadOnScroll })
+      queryClient.invalidateQueries({ queryKey: ['generalSettings'] })
       setSaveStatus('success')
       setTimeout(() => setSaveStatus('idle'), 2000)
     } catch {
@@ -40,15 +47,37 @@ export function GeneralSettings() {
   }
 
   const handleAutoReadabilityChange = useCallback(async (checked: boolean) => {
+    if (!generalSettings) return
+
     setAutoReadability(checked)
     try {
-      await updateGeneralSettings({ fallbackUserAgent: fallbackUA, autoReadability: checked })
+      await updateGeneralSettings({
+        fallbackUserAgent: generalSettings.fallbackUserAgent,
+        autoReadability: checked,
+        markReadOnScroll,
+      })
       queryClient.invalidateQueries({ queryKey: ['generalSettings'] })
     } catch {
       // Revert on error
       setAutoReadability(!checked)
     }
-  }, [fallbackUA, queryClient])
+  }, [generalSettings, markReadOnScroll, queryClient])
+
+  const handleMarkReadOnScrollChange = useCallback(async (checked: boolean) => {
+    if (!generalSettings) return
+
+    setMarkReadOnScroll(checked)
+    try {
+      await updateGeneralSettings({
+        fallbackUserAgent: generalSettings.fallbackUserAgent,
+        autoReadability,
+        markReadOnScroll: checked,
+      })
+      queryClient.invalidateQueries({ queryKey: ['generalSettings'] })
+    } catch {
+      setMarkReadOnScroll(!checked)
+    }
+  }, [autoReadability, generalSettings, queryClient])
 
   const languageOptions = useMemo(() => [
     { value: 'zh' as Language, label: t('language.zh') },
@@ -88,6 +117,22 @@ export function GeneralSettings() {
           <Switch
             checked={autoReadability}
             onCheckedChange={handleAutoReadabilityChange}
+            disabled={settingsDisabled}
+          />
+        </div>
+      </section>
+
+      {/* Mark Read On Scroll Section */}
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="text-sm font-medium">{t('settings.mark_read_on_scroll')}</div>
+            <div className="text-xs text-muted-foreground">{t('settings.mark_read_on_scroll_description')}</div>
+          </div>
+          <Switch
+            checked={markReadOnScroll}
+            onCheckedChange={handleMarkReadOnScrollChange}
+            disabled={settingsDisabled}
           />
         </div>
       </section>
@@ -107,6 +152,7 @@ export function GeneralSettings() {
               type="text"
               value={fallbackUA}
               onChange={(e) => setFallbackUA(e.target.value)}
+              disabled={settingsDisabled}
               placeholder={t('settings.fallback_ua_placeholder')}
               className={cn(
                 'h-9 w-64 max-w-full rounded-md border border-border bg-background px-3 text-sm',
@@ -117,7 +163,7 @@ export function GeneralSettings() {
             <button
               type="button"
               onClick={handleSaveFallbackUA}
-              disabled={isSaving}
+              disabled={isSaving || settingsDisabled}
               className={cn(
                 'h-9 rounded-md px-3 text-sm font-medium transition-colors shrink-0',
                 'bg-primary text-primary-foreground hover:bg-primary/90',
