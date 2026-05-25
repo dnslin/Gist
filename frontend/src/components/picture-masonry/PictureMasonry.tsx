@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from 'react'
+import { useMemo, useRef, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry'
 import { useEntriesInfinite, useUnreadCounts } from '@/hooks/useEntries'
@@ -10,6 +10,8 @@ import { selectionToParams, type SelectionType } from '@/hooks/useSelection'
 import { flattenUniqueEntries } from '@/lib/entry-pagination'
 import { useImageDimensionsStore } from '@/stores/image-dimensions-store'
 import { PictureItem } from './PictureItem'
+import { useGeneralSettings } from '@/hooks/useGeneralSettings'
+import { useMasonryScrollMarkRead } from './useMasonryScrollMarkRead'
 import { EntryListHeader } from '@/components/entry-list/EntryListHeader'
 import type { ContentType, Entry, Feed } from '@/types/api'
 
@@ -55,7 +57,11 @@ function findScrollableElement(root: HTMLElement | null): HTMLElement | null {
 
 function MasonryItemContent({ data: item }: { data: MasonryItem }) {
   if (!item?.entry) return null
-  return <PictureItem entry={item.entry} feed={item.feed} />
+  return (
+    <div data-entry-id={item.entry.id}>
+      <PictureItem entry={item.entry} feed={item.feed} />
+    </div>
+  )
 }
 
 export function PictureMasonry({
@@ -74,6 +80,7 @@ export function PictureMasonry({
   const params = selectionToParams(selection, contentType)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
 
   // Swipe gesture: Right swipe opens sidebar (only on mobile)
   useSwipeGesture(wrapperRef, {
@@ -109,6 +116,8 @@ export function PictureMasonry({
     unreadOnly,
     hasThumbnail: true,
   })
+  const { data: generalSettings } = useGeneralSettings()
+  const markReadOnScroll = generalSettings?.markReadOnScroll ?? false
 
   const feedsMap = useMemo(() => {
     const map = new Map<string, Feed>()
@@ -179,6 +188,7 @@ export function PictureMasonry({
 
       scrollEl?.removeEventListener('scroll', handleScroll)
       scrollEl = nextScrollEl
+      setScrollElement(nextScrollEl)
       scrollEl.addEventListener('scroll', handleScroll, { passive: true })
       return true
     }
@@ -196,6 +206,7 @@ export function PictureMasonry({
     return () => {
       observer?.disconnect()
       scrollEl?.removeEventListener('scroll', handleScroll)
+      setScrollElement((current) => (current === scrollEl ? null : current))
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage, isReady])
 
@@ -206,6 +217,14 @@ export function PictureMasonry({
     scrollEl.scrollTop = 0
   }, [selection, unreadOnly])
 
+  const { endPaddingHeight: scrollReadEndPaddingHeight } = useMasonryScrollMarkRead({
+    scrollElement,
+    entries,
+    enabled: markReadOnScroll,
+    unreadOnly,
+    hasNextPage: Boolean(hasNextPage),
+    resetKey: `${filterKey}\u0000${markReadOnScroll}`,
+  })
   const title = useMemo(() => {
     switch (selection.type) {
       case 'all':
@@ -273,6 +292,7 @@ export function PictureMasonry({
             columnCount={currentColumn}
             ItemContent={MasonryItemContent}
             className="h-full p-4"
+            style={{ paddingBottom: scrollReadEndPaddingHeight || undefined }}
           />
         ) : null}
         {isFetchingNextPage && <LoadingMore />}
