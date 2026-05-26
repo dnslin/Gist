@@ -237,12 +237,15 @@ export function useMasonryScrollMarkRead({
     pendingReadEntryIds.current.add(entryId)
     if (batchTimer.current) return
 
-    batchTimer.current = setTimeout(flushReadQueue, MARK_READ_ON_SCROLL_BATCH_DELAY_MS)
+    const remainingGraceMs = Math.max(0, graceUntil.current - Date.now())
+    batchTimer.current = setTimeout(
+      flushReadQueue,
+      remainingGraceMs + MARK_READ_ON_SCROLL_BATCH_DELAY_MS
+    )
   }, [flushReadQueue])
 
   useEffect(() => {
     if (!enabled || !scrollElement || typeof IntersectionObserver === 'undefined') return
-    if (Date.now() < graceUntil.current) return
 
     const unreadIds = new Set(entries.filter((entry) => !entry.read).map((entry) => entry.id))
     if (unreadIds.size === 0) return
@@ -250,8 +253,6 @@ export function useMasonryScrollMarkRead({
     const observer = new IntersectionObserver(
       (items) => {
         for (const item of items) {
-          if (Date.now() < graceUntil.current) continue
-
           const target = item.target as HTMLElement
           const entryId = target.dataset.entryId
           if (!entryId || !unreadIds.has(entryId) || markedReadIds.current.has(entryId)) continue

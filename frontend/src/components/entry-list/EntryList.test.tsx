@@ -187,6 +187,55 @@ function installScrollMarkObserver({
   } as unknown as typeof IntersectionObserver
 }
 
+function installGraceOnlyScrollMarkObserver() {
+  const installedAt = Date.now()
+  globalThis.IntersectionObserver = class {
+    private callback: IntersectionObserverCallback
+
+    constructor(callback: IntersectionObserverCallback) {
+      this.callback = callback
+    }
+
+    observe = (target: Element) => {
+      const element = target as HTMLElement
+      if (!element.dataset.entryId || Date.now() - installedAt >= 1000) return
+
+      Object.defineProperty(element, 'offsetHeight', { configurable: true, value: 40 })
+      element.getBoundingClientRect = () => ({
+        x: 0,
+        y: -40,
+        width: 300,
+        height: 40,
+        top: -40,
+        bottom: 0,
+        left: 0,
+        right: 300,
+        toJSON: () => ({}),
+      })
+
+      this.callback(
+        [
+          { isIntersecting: true, target: element } as IntersectionObserverEntry,
+          {
+            isIntersecting: false,
+            target: element,
+            boundingClientRect: { bottom: 0 },
+            rootBounds: { top: 10 },
+          } as IntersectionObserverEntry,
+        ],
+        this as unknown as IntersectionObserver
+      )
+    }
+
+    disconnect = vi.fn()
+    unobserve = vi.fn()
+    takeRecords = () => []
+    root = null
+    rootMargin = ''
+    thresholds = []
+  } as unknown as typeof IntersectionObserver
+}
+
 async function flushMarkReadBatch() {
   await act(async () => {
     vi.advanceTimersByTime(1000)
@@ -559,6 +608,23 @@ describe('EntryList translation scheduling', () => {
     })
 
     expect(mockMarkManyAsRead).toHaveBeenCalled()
+  })
+
+  it('静默窗口内发生的首次滚动会在窗口结束后标已读', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    installGraceOnlyScrollMarkObserver()
+
+    render(<EntryList {...defaultProps} unreadOnly />)
+
+    await flushMarkReadBatch()
+
+    expect(mockMarkManyAsRead).toHaveBeenCalledWith(
+      { ids: ['1', '2', '3', '4', '5'], read: true, skipInvalidate: true },
+      expect.any(Object)
+    )
   })
 
   it('关闭滚动标已读时不会触发标记', async () => {
