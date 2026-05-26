@@ -435,33 +435,102 @@ describe('EntryList translation scheduling', () => {
     )
   })
 
-  it('滚动标已读底部填充使用滚动容器高度', async () => {
+  it('滚动标已读底部填充只在自然内容溢出时使用滚动容器高度', async () => {
     vi.mocked(useGeneralSettings).mockReturnValue({
       data: { markReadOnScroll: true },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     const previousClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
+    const previousScrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
 
-    Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-      configurable: true,
-      get() {
-        return this instanceof HTMLElement && this.dataset.testid === 'entry-list-viewport' ? 240 : 0
-      },
-    })
+    try {
+      Object.defineProperties(HTMLElement.prototype, {
+        clientHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'entry-list-viewport' ? 240 : 0
+          },
+        },
+        scrollHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'entry-list-viewport' ? 360 : 0
+          },
+        },
+      })
 
-    render(<EntryList {...defaultProps} />)
-    await act(async () => {
-      await Promise.resolve()
-    })
+      render(<EntryList {...defaultProps} />)
+      await act(async () => {
+        await Promise.resolve()
+      })
 
-    const viewport = screen.getByTestId('entry-list-viewport')
-    const spacer = viewport.querySelector('[aria-hidden="true"]') as HTMLElement | null
-    expect(spacer?.style.height).toBe('240px')
+      const viewport = screen.getByTestId('entry-list-viewport')
+      const spacer = viewport.querySelector('[aria-hidden="true"]') as HTMLElement | null
+      expect(spacer?.style.height).toBe('240px')
+    } finally {
+      if (previousClientHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'clientHeight', previousClientHeight)
+      } else {
+        delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight
+      }
+      if (previousScrollHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollHeight', previousScrollHeight)
+      } else {
+        delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight
+      }
+    }
+  })
 
-    if (previousClientHeight) {
-      Object.defineProperty(HTMLElement.prototype, 'clientHeight', previousClientHeight)
-    } else {
-      delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight
+  it('滚动标已读不会给短列表额外制造滚动条', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    vi.mocked(useEntriesInfinite).mockReturnValue({
+      data: { pages: [{ entries: [makeEntry('1'), makeEntry('2')], hasMore: false }] },
+      fetchNextPage: vi.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      isLoading: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    const previousClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
+    const previousScrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
+
+    try {
+      Object.defineProperties(HTMLElement.prototype, {
+        clientHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'entry-list-viewport' ? 240 : 0
+          },
+        },
+        scrollHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'entry-list-viewport' ? 160 : 0
+          },
+        },
+      })
+
+      render(<EntryList {...defaultProps} />)
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      const viewport = screen.getByTestId('entry-list-viewport')
+      expect(viewport.querySelector('[aria-hidden="true"]')).toBeNull()
+    } finally {
+      if (previousClientHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'clientHeight', previousClientHeight)
+      } else {
+        delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight
+      }
+      if (previousScrollHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollHeight', previousScrollHeight)
+      } else {
+        delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight
+      }
     }
   })
 

@@ -443,18 +443,27 @@ describe('PictureMasonry scroll mark read', () => {
     requestAnimationFrameMock.mockRestore()
   })
 
-  it('滚动标已读底部填充使用图片墙滚动容器高度', async () => {
+  it('滚动标已读底部填充只在自然内容溢出时使用图片墙滚动容器高度', async () => {
     vi.mocked(useGeneralSettings).mockReturnValue({
       data: { markReadOnScroll: true },
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
     const previousClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
+    const previousScrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
 
     try {
-      Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-        configurable: true,
-        get() {
-          return this instanceof HTMLElement && this.dataset.testid === 'picture-masonry-scroll' ? 320 : 0
+      Object.defineProperties(HTMLElement.prototype, {
+        clientHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'picture-masonry-scroll' ? 320 : 0
+          },
+        },
+        scrollHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'picture-masonry-scroll' ? 480 : 0
+          },
         },
       })
 
@@ -469,6 +478,56 @@ describe('PictureMasonry scroll mark read', () => {
         Object.defineProperty(HTMLElement.prototype, 'clientHeight', previousClientHeight)
       } else {
         delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight
+      }
+      if (previousScrollHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollHeight', previousScrollHeight)
+      } else {
+        delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight
+      }
+    }
+  })
+
+  it('滚动标已读不会给短图片列表额外制造滚动条', async () => {
+    vi.mocked(useGeneralSettings).mockReturnValue({
+      data: { markReadOnScroll: true },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any)
+    mockEntries([makeEntry('1'), makeEntry('2')])
+    const previousClientHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
+    const previousScrollHeight = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollHeight')
+
+    try {
+      Object.defineProperties(HTMLElement.prototype, {
+        clientHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'picture-masonry-scroll' ? 320 : 0
+          },
+        },
+        scrollHeight: {
+          configurable: true,
+          get() {
+            return this instanceof HTMLElement && this.dataset.testid === 'picture-masonry-scroll' ? 220 : 0
+          },
+        },
+      })
+
+      render(<PictureMasonry {...defaultProps} />)
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(screen.getByTestId('picture-masonry-scroll').style.paddingBottom).toBe('')
+    } finally {
+      if (previousClientHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'clientHeight', previousClientHeight)
+      } else {
+        delete (HTMLElement.prototype as { clientHeight?: number }).clientHeight
+      }
+      if (previousScrollHeight) {
+        Object.defineProperty(HTMLElement.prototype, 'scrollHeight', previousScrollHeight)
+      } else {
+        delete (HTMLElement.prototype as { scrollHeight?: number }).scrollHeight
       }
     }
   })

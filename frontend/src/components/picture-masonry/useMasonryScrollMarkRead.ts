@@ -66,30 +66,67 @@ export function useMasonryScrollMarkRead({
   const session = useRef(0)
   const graceUntil = useRef(0)
   const [observerVersion, setObserverVersion] = useState(0)
-  const [scrollHeight, setScrollHeight] = useState(0)
+  const endPaddingHeightRef = useRef(0)
+  const [scrollLayout, setScrollLayout] = useState({
+    viewportHeight: 0,
+    naturalContentOverflows: false,
+  })
   const scrollElementRef = useRef<HTMLElement | null>(scrollElement)
 
   const entriesIdentityKey = useMemo(() => entries.map((entry) => entry.id).join('\u0000'), [entries])
-  const endPaddingHeight = enabled && entries.length > 0 && !hasNextPage ? scrollHeight : 0
-
+  const hasUnreadEntries = useMemo(() => entries.some((entry) => !entry.read), [entries])
+  const endPaddingHeight =
+    enabled && hasUnreadEntries && !hasNextPage && scrollLayout.naturalContentOverflows
+      ? scrollLayout.viewportHeight
+      : 0
 
   useEffect(() => {
     scrollElementRef.current = scrollElement
   }, [scrollElement])
   useEffect(() => {
+    endPaddingHeightRef.current = endPaddingHeight
+  }, [endPaddingHeight])
+
+  const measureScrollLayout = useCallback(() => {
     if (!scrollElement) return
 
-    const updateHeight = () => setScrollHeight(scrollElement.clientHeight)
-    updateHeight()
+    const viewportHeight = scrollElement.clientHeight
+    const naturalScrollHeight = Math.max(0, scrollElement.scrollHeight - endPaddingHeightRef.current)
+    const naturalContentOverflows = naturalScrollHeight > viewportHeight + 1
+
+    setScrollLayout((current) => {
+      if (
+        current.viewportHeight === viewportHeight &&
+        current.naturalContentOverflows === naturalContentOverflows
+      ) {
+        return current
+      }
+
+      return { viewportHeight, naturalContentOverflows }
+    })
+  }, [scrollElement])
+
+  useEffect(() => {
+    if (!scrollElement) return
+
+    measureScrollLayout()
 
     if (typeof ResizeObserver === 'undefined') return
 
-    const observer = new ResizeObserver(updateHeight)
+    const observer = new ResizeObserver(measureScrollLayout)
     observer.observe(scrollElement)
+    for (const child of Array.from(scrollElement.children)) {
+      observer.observe(child)
+    }
+
     return () => {
       observer.disconnect()
     }
-  }, [scrollElement])
+  }, [measureScrollLayout, scrollElement])
+
+  useEffect(() => {
+    measureScrollLayout()
+  }, [entriesIdentityKey, enabled, hasNextPage, measureScrollLayout])
 
   useEffect(() => {
     seenEntryIds.current.clear()

@@ -36,26 +36,65 @@ export function useScrollMarkRead({
   const session = useRef(0)
   const graceUntil = useRef(0)
   const [observerVersion, setObserverVersion] = useState(0)
-  const [containerHeight, setContainerHeight] = useState(0)
+  const endPaddingHeightRef = useRef(0)
+  const [scrollLayout, setScrollLayout] = useState({
+    containerHeight: 0,
+    naturalContentOverflows: false,
+  })
 
   const entriesIdentityKey = useMemo(() => entries.map((entry) => entry.id).join('\u0000'), [entries])
-  const endPaddingHeight = enabled && entries.length > 0 && !hasNextPage ? containerHeight : 0
+  const hasUnreadEntries = useMemo(() => entries.some((entry) => !entry.read), [entries])
+  const endPaddingHeight =
+    enabled && hasUnreadEntries && !hasNextPage && scrollLayout.naturalContentOverflows
+      ? scrollLayout.containerHeight
+      : 0
+
+  useEffect(() => {
+    endPaddingHeightRef.current = endPaddingHeight
+  }, [endPaddingHeight])
+
+  const measureScrollLayout = useCallback(() => {
+    const node = containerRef.current
+    if (!node) return
+
+    const containerHeight = node.clientHeight
+    const naturalScrollHeight = Math.max(0, node.scrollHeight - endPaddingHeightRef.current)
+    const naturalContentOverflows = naturalScrollHeight > containerHeight + 1
+
+    setScrollLayout((current) => {
+      if (
+        current.containerHeight === containerHeight &&
+        current.naturalContentOverflows === naturalContentOverflows
+      ) {
+        return current
+      }
+
+      return { containerHeight, naturalContentOverflows }
+    })
+  }, [containerRef])
 
   useEffect(() => {
     const node = containerRef.current
     if (!node) return
 
-    const updateHeight = () => setContainerHeight(node.clientHeight)
-    updateHeight()
+    measureScrollLayout()
 
     if (typeof ResizeObserver === 'undefined') return
 
-    const observer = new ResizeObserver(updateHeight)
+    const observer = new ResizeObserver(measureScrollLayout)
     observer.observe(node)
+    for (const child of Array.from(node.children)) {
+      observer.observe(child)
+    }
+
     return () => {
       observer.disconnect()
     }
-  }, [containerRef])
+  }, [containerRef, measureScrollLayout])
+
+  useEffect(() => {
+    measureScrollLayout()
+  }, [entriesIdentityKey, enabled, hasNextPage, measureScrollLayout])
 
   useEffect(() => {
     seenEntryIds.current.clear()
