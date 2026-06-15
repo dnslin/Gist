@@ -2158,20 +2158,12 @@ const docTemplate = `{
                 "rateLimit": {
                     "type": "integer"
                 },
-                "reasoningEffort": {
-                    "type": "string"
+                "requestOptions": {
+                    "type": "object",
+                    "additionalProperties": {}
                 },
                 "summaryLanguage": {
                     "type": "string"
-                },
-                "thinking": {
-                    "type": "boolean"
-                },
-                "thinkingBudget": {
-                    "type": "integer"
-                },
-                "thinkingSupported": {
-                    "type": "boolean"
                 }
             }
         },
@@ -2199,20 +2191,12 @@ const docTemplate = `{
                 "rateLimit": {
                     "type": "integer"
                 },
-                "reasoningEffort": {
-                    "type": "string"
+                "requestOptions": {
+                    "type": "object",
+                    "additionalProperties": {}
                 },
                 "summaryLanguage": {
                     "type": "string"
-                },
-                "thinking": {
-                    "type": "boolean"
-                },
-                "thinkingBudget": {
-                    "type": "integer"
-                },
-                "thinkingSupported": {
-                    "type": "boolean"
                 }
             }
         },
@@ -2231,17 +2215,9 @@ const docTemplate = `{
                 "provider": {
                     "type": "string"
                 },
-                "reasoningEffort": {
-                    "type": "string"
-                },
-                "thinking": {
-                    "type": "boolean"
-                },
-                "thinkingBudget": {
-                    "type": "integer"
-                },
-                "thinkingSupported": {
-                    "type": "boolean"
+                "requestOptions": {
+                    "type": "object",
+                    "additionalProperties": {}
                 }
             }
         },

@@ -14,18 +14,15 @@ import (
 
 // AISettings holds the AI configuration.
 type AISettings struct {
-	Provider          string `json:"provider"`
-	APIKey            string `json:"apiKey"`
-	BaseURL           string `json:"baseUrl"`
-	Model             string `json:"model"`
-	ThinkingSupported bool   `json:"thinkingSupported"`
-	Thinking          bool   `json:"thinking"`
-	ThinkingBudget    int    `json:"thinkingBudget"`
-	ReasoningEffort   string `json:"reasoningEffort"`
-	SummaryLanguage   string `json:"summaryLanguage"`
-	AutoTranslate     bool   `json:"autoTranslate"`
-	AutoSummary       bool   `json:"autoSummary"`
-	RateLimit         int    `json:"rateLimit"`
+	Provider        string         `json:"provider"`
+	APIKey          string         `json:"apiKey"`
+	BaseURL         string         `json:"baseUrl"`
+	Model           string         `json:"model"`
+	RequestOptions  map[string]any `json:"requestOptions"`
+	SummaryLanguage string         `json:"summaryLanguage"`
+	AutoTranslate   bool           `json:"autoTranslate"`
+	AutoSummary     bool           `json:"autoSummary"`
+	RateLimit       int            `json:"rateLimit"`
 }
 
 // GeneralSettings holds general application settings.
@@ -53,18 +50,15 @@ type AppearanceSettings struct {
 
 // Setting keys
 const (
-	keyAIProvider          = "ai.provider"
-	keyAIAPIKey            = "ai.api_key"
-	keyAIBaseURL           = "ai.base_url"
-	keyAIModel             = "ai.model"
-	keyAIThinkingSupported = "ai.thinking_supported"
-	keyAIThinking          = "ai.thinking"
-	keyAIThinkingBudget    = "ai.thinking_budget"
-	keyAIReasoningEffort   = "ai.reasoning_effort"
-	keyAISummaryLanguage   = "ai.summary_language"
-	keyAIAutoTranslate     = "ai.auto_translate"
-	keyAIAutoSummary       = "ai.auto_summary"
-	keyAIRateLimit         = "ai.rate_limit"
+	keyAIProvider        = "ai.provider"
+	keyAIAPIKey          = "ai.api_key"
+	keyAIBaseURL         = "ai.base_url"
+	keyAIModel           = "ai.model"
+	keyAIRequestOptions  = "ai.request_options"
+	keyAISummaryLanguage = "ai.summary_language"
+	keyAIAutoTranslate   = "ai.auto_translate"
+	keyAIAutoSummary     = "ai.auto_summary"
+	keyAIRateLimit       = "ai.rate_limit"
 
 	keyFallbackUserAgent = "general.fallback_user_agent"
 	keyAutoReadability   = "general.auto_readability"
@@ -88,7 +82,7 @@ type SettingsService interface {
 	// If apiKey is empty string, it keeps the existing key.
 	SetAISettings(ctx context.Context, settings *AISettings) error
 	// TestAI tests the AI connection with the given configuration.
-	TestAI(ctx context.Context, provider, apiKey, baseURL, model string, thinkingSupported, thinking bool, thinkingBudget int, reasoningEffort string) (string, error)
+	TestAI(ctx context.Context, provider, apiKey, baseURL, model string, requestOptions map[string]any) (string, error)
 	// GetGeneralSettings returns the general settings.
 	GetGeneralSettings(ctx context.Context) (*GeneralSettings, error)
 	// SetGeneralSettings updates the general settings.
@@ -126,8 +120,6 @@ func NewSettingsService(repo repository.SettingsRepository, rateLimiter *ai.Rate
 func (s *settingsService) GetAISettings(ctx context.Context) (*AISettings, error) {
 	settings := &AISettings{
 		Provider:        ai.ProviderOpenAI, // default
-		ThinkingBudget:  10000,             // default budget
-		ReasoningEffort: "medium",          // default effort
 		SummaryLanguage: "zh-CN",           // default language
 	}
 
@@ -143,14 +135,10 @@ func (s *settingsService) GetAISettings(ctx context.Context) (*AISettings, error
 	if val, err := s.getString(ctx, keyAIModel); err == nil {
 		settings.Model = val
 	}
-	settings.ThinkingSupported = s.getBool(ctx, keyAIThinkingSupported)
-	settings.Thinking = s.getBool(ctx, keyAIThinking)
-	if val, err := s.getInt(ctx, keyAIThinkingBudget); err == nil && val > 0 {
-		settings.ThinkingBudget = val
-	}
-	// Allow empty string to override default (for Compatible Budget mode)
-	if setting, err := s.repo.Get(ctx, keyAIReasoningEffort); err == nil && setting != nil {
-		settings.ReasoningEffort = setting.Value
+	if val, err := s.getRequestOptions(ctx); err != nil {
+		return nil, err
+	} else {
+		settings.RequestOptions = val
 	}
 	if val, err := s.getString(ctx, keyAISummaryLanguage); err == nil && val != "" {
 		settings.SummaryLanguage = val
@@ -185,29 +173,17 @@ func (s *settingsService) SetAISettings(ctx context.Context, settings *AISetting
 		logger.Warn("ai settings update model failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "model", settings.Model, "error", err)
 		return fmt.Errorf("set model: %w", err)
 	}
-	thinkingSupportedVal := "false"
-	if settings.ThinkingSupported {
-		thinkingSupportedVal = "true"
+	requestOptions, err := json.Marshal(settings.RequestOptions)
+	if err != nil {
+		logger.Warn("ai settings marshal request options failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
+		return fmt.Errorf("marshal request options: %w", err)
 	}
-	if err := s.repo.Set(ctx, keyAIThinkingSupported, thinkingSupportedVal); err != nil {
-		logger.Warn("ai settings update thinking supported failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
-		return fmt.Errorf("set thinking supported: %w", err)
+	if string(requestOptions) == "null" {
+		requestOptions = []byte("{}")
 	}
-	thinkingVal := "false"
-	if settings.Thinking {
-		thinkingVal = "true"
-	}
-	if err := s.repo.Set(ctx, keyAIThinking, thinkingVal); err != nil {
-		logger.Warn("ai settings update thinking failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
-		return fmt.Errorf("set thinking: %w", err)
-	}
-	if err := s.repo.Set(ctx, keyAIThinkingBudget, fmt.Sprintf("%d", settings.ThinkingBudget)); err != nil {
-		logger.Warn("ai settings update thinking budget failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
-		return fmt.Errorf("set thinking budget: %w", err)
-	}
-	if err := s.repo.Set(ctx, keyAIReasoningEffort, settings.ReasoningEffort); err != nil {
-		logger.Warn("ai settings update reasoning effort failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
-		return fmt.Errorf("set reasoning effort: %w", err)
+	if err := s.repo.Set(ctx, keyAIRequestOptions, string(requestOptions)); err != nil {
+		logger.Warn("ai settings update request options failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
+		return fmt.Errorf("set request options: %w", err)
 	}
 	if err := s.repo.Set(ctx, keyAISummaryLanguage, settings.SummaryLanguage); err != nil {
 		logger.Warn("ai settings update summary language failed", "module", "service", "action", "update", "resource", "settings", "result", "failed", "error", err)
@@ -283,7 +259,7 @@ func isMaskedKey(key string) bool {
 }
 
 // TestAI tests the AI connection with the given configuration.
-func (s *settingsService) TestAI(ctx context.Context, provider, apiKey, baseURL, model string, thinkingSupported, thinking bool, thinkingBudget int, reasoningEffort string) (string, error) {
+func (s *settingsService) TestAI(ctx context.Context, provider, apiKey, baseURL, model string, requestOptions map[string]any) (string, error) {
 	// If apiKey looks like a masked key, try to get the stored key
 	if isMaskedKey(apiKey) {
 		storedKey, err := s.getString(ctx, keyAIAPIKey)
@@ -294,14 +270,11 @@ func (s *settingsService) TestAI(ctx context.Context, provider, apiKey, baseURL,
 	}
 
 	cfg := ai.Config{
-		Provider:          provider,
-		APIKey:            apiKey,
-		BaseURL:           baseURL,
-		Model:             model,
-		ThinkingSupported: thinkingSupported,
-		Thinking:          thinking,
-		ThinkingBudget:    thinkingBudget,
-		ReasoningEffort:   reasoningEffort,
+		Provider:       provider,
+		APIKey:         apiKey,
+		BaseURL:        baseURL,
+		Model:          model,
+		RequestOptions: requestOptions,
 	}
 
 	p, err := ai.NewProvider(cfg)
@@ -347,6 +320,19 @@ func (s *settingsService) getInt(ctx context.Context, key string) (int, error) {
 func (s *settingsService) getBool(ctx context.Context, key string) bool {
 	val, err := s.getString(ctx, key)
 	return err == nil && val == "true"
+}
+
+func (s *settingsService) getRequestOptions(ctx context.Context) (map[string]any, error) {
+	val, err := s.getString(ctx, keyAIRequestOptions)
+	if err != nil || val == "" {
+		return nil, err
+	}
+
+	var options map[string]any
+	if err := json.Unmarshal([]byte(val), &options); err != nil {
+		return nil, fmt.Errorf("unmarshal request options: %w", err)
+	}
+	return options, nil
 }
 
 // setAPIKey sets an API key.

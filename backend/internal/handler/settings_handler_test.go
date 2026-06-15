@@ -55,13 +55,20 @@ func TestSettingsHandler_UpdateAISettings_Success(t *testing.T) {
 		"provider": "openai",
 		"baseUrl":  "https://api.openai.com/v1",
 		"model":    "gpt-4",
+		"requestOptions": map[string]any{
+			"temperature": 0.2,
+			"extra_body":  map[string]any{"trace": true},
+		},
 	}
 	req := newJSONRequest(http.MethodPut, "/settings/ai", reqBody)
 	c, rec := newTestContext(e, req)
 
 	mockService.EXPECT().
 		SetAISettings(gomock.Any(), gomock.Any()).
-		Return(nil)
+		DoAndReturn(func(_ context.Context, settings *service.AISettings) error {
+			require.Equal(t, map[string]any{"temperature": 0.2, "extra_body": map[string]any{"trace": true}}, settings.RequestOptions)
+			return nil
+		})
 
 	mockService.EXPECT().
 		GetAISettings(gomock.Any()).
@@ -266,12 +273,16 @@ func TestSettingsHandler_TestAI_Success(t *testing.T) {
 		"apiKey":   "sk-test",
 		"baseUrl":  "https://api.openai.com/v1",
 		"model":    "gpt-4",
+		"requestOptions": map[string]any{
+			"temperature": 0.2,
+			"extra_body":  map[string]any{"trace": true},
+		},
 	}
 	req := newJSONRequest(http.MethodPost, "/settings/ai/test", reqBody)
 	c, rec := newTestContext(e, req)
 
 	mockService.EXPECT().
-		TestAI(gomock.Any(), "openai", "sk-test", "https://api.openai.com/v1", "gpt-4", false, false, 0, "").
+		TestAI(gomock.Any(), "openai", "sk-test", "https://api.openai.com/v1", "gpt-4", map[string]any{"temperature": 0.2, "extra_body": map[string]any{"trace": true}}).
 		Return("OK", nil)
 
 	err := h.TestAI(c)
@@ -320,7 +331,7 @@ func TestSettingsHandler_TestAI_AnthropicBaseURLOptional(t *testing.T) {
 	c, rec := newTestContext(e, req)
 
 	mockService.EXPECT().
-		TestAI(gomock.Any(), "anthropic", "sk-ant-test", "", "claude-sonnet-4-20250514", false, false, 0, "").
+		TestAI(gomock.Any(), "anthropic", "sk-ant-test", "", "claude-sonnet-4-20250514", map[string]any(nil)).
 		Return("OK", nil)
 
 	err := h.TestAI(c)

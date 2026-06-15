@@ -58,16 +58,11 @@ definitions:
         type: string
       rateLimit:
         type: integer
-      reasoningEffort:
-        type: string
+      requestOptions:
+        additionalProperties: {}
+        type: object
       summaryLanguage:
         type: string
-      thinking:
-        type: boolean
-      thinkingBudget:
-        type: integer
-      thinkingSupported:
-        type: boolean
     type: object
   internal_handler.aiSettingsResponse:
     properties:
@@ -85,16 +80,11 @@ definitions:
         type: string
       rateLimit:
         type: integer
-      reasoningEffort:
-        type: string
+      requestOptions:
+        additionalProperties: {}
+        type: object
       summaryLanguage:
         type: string
-      thinking:
-        type: boolean
-      thinkingBudget:
-        type: integer
-      thinkingSupported:
-        type: boolean
     type: object
   internal_handler.aiTestRequest:
     properties:
@@ -106,14 +96,9 @@ definitions:
         type: string
       provider:
         type: string
-      reasoningEffort:
-        type: string
-      thinking:
-        type: boolean
-      thinkingBudget:
-        type: integer
-      thinkingSupported:
-        type: boolean
+      requestOptions:
+        additionalProperties: {}
+        type: object
     type: object
   internal_handler.aiTestResponse:
     properties:
