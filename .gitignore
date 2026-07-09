@@ -18,3 +18,13 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
+# spexcode:start
+.claude/settings.json
+.codex/hooks.json
+.session
+.worktrees/
+AGENTS.md
+CLAUDE.md
+spexcode.local.json
+# spexcode:end
