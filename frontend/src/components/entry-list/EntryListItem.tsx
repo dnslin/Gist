@@ -1,24 +1,24 @@
-import { forwardRef, useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import { formatRelativeTime } from '@/lib/date-utils'
-import { stripHtml } from '@/lib/html-utils'
-import { useTranslationStore } from '@/stores/translation-store'
-import { FeedIcon } from '@/components/ui/feed-icon'
-import type { Entry, Feed } from '@/types/api'
+import { forwardRef, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import { formatRelativeTime } from "@/lib/date-utils";
+import { stripHtml } from "@/lib/html-utils";
+import { useTranslationStore } from "@/stores/translation-store";
+import { FeedIcon } from "@/components/ui/feed-icon";
+import type { Entry, Feed } from "@/types/api";
 
-const URL_PATTERN = /\bhttps?:\/\/\S+/i
+const URL_PATTERN = /\bhttps?:\/\/\S+/i;
 
 interface EntryListItemProps {
-  entry: Entry
-  feed?: Feed
-  isSelected: boolean
-  onClick: () => void
-  autoTranslate?: boolean
-  targetLanguage?: string
-  style?: React.CSSProperties
-  'data-index'?: number
-  'data-entry-id'?: string
+  entry: Entry;
+  feed?: Feed;
+  isSelected: boolean;
+  onClick: () => void;
+  autoTranslate?: boolean;
+  targetLanguage?: string;
+  style?: React.CSSProperties;
+  "data-index"?: number;
+  "data-entry-id"?: string;
 }
 
 export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
@@ -31,43 +31,45 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
       autoTranslate,
       targetLanguage,
       style,
-      'data-index': dataIndex,
-      'data-entry-id': dataEntryId,
+      "data-index": dataIndex,
+      "data-entry-id": dataEntryId,
     },
-    ref
+    ref,
   ) {
-    const { t } = useTranslation()
-    const publishedAt = entry.publishedAt ? formatRelativeTime(entry.publishedAt, t) : null
-    const [iconError, setIconError] = useState(false)
-    const showIcon = feed?.iconPath && !iconError
-    const fallbackTitle = t('entry.untitled')
-    const fallbackFeedName = t('entry.unknown_feed')
+    const { t } = useTranslation();
+    const publishedAt = entry.publishedAt
+      ? formatRelativeTime(entry.publishedAt, t)
+      : null;
+    const [iconError, setIconError] = useState(false);
+    const showIcon = feed?.iconPath && !iconError;
+    const fallbackTitle = t("entry.untitled");
+    const fallbackFeedName = t("entry.unknown_feed");
 
     const translation = useTranslationStore((state) =>
       autoTranslate && targetLanguage
         ? state.getTranslation(entry.id, targetLanguage)
-        : undefined
-    )
+        : undefined,
+    );
 
     const strippedContent = useMemo(
       () => (entry.content ? stripHtml(entry.content).slice(0, 150) : null),
-      [entry.content]
-    )
+      [entry.content],
+    );
 
-    const displayTitle = translation?.title ?? entry.title
-    const displaySummary = translation?.summary ?? strippedContent
-    const displayFeedName = feed?.title || fallbackFeedName
-    const titleContainsUrl = URL_PATTERN.test(displayTitle ?? '')
-    const summaryContainsUrl = URL_PATTERN.test(displaySummary ?? '')
+    const displayTitle = translation?.title ?? entry.title;
+    const displaySummary = translation?.summary ?? strippedContent;
+    const displayFeedName = feed?.title || fallbackFeedName;
+    const titleContainsUrl = URL_PATTERN.test(displayTitle ?? "");
+    const summaryContainsUrl = URL_PATTERN.test(displaySummary ?? "");
 
     return (
       <div
         ref={ref}
         className={cn(
-          'w-full min-w-0 overflow-hidden px-4 py-3 cursor-pointer transition-colors',
-          'hover:bg-item-hover',
-          isSelected && 'bg-item-active',
-          !entry.read && !isSelected && 'bg-accent/5'
+          "w-full min-w-0 overflow-hidden px-4 py-3 cursor-pointer transition-colors",
+          "hover:bg-item-hover",
+          isSelected && "bg-item-active",
+          !entry.read && !isSelected && "bg-accent/5",
         )}
         style={style}
         data-index={dataIndex}
@@ -98,9 +100,9 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
         {/* Line 2: title */}
         <div
           className={cn(
-            'mt-1 text-sm wrap-anywhere',
-            titleContainsUrl ? 'line-clamp-3' : 'line-clamp-2',
-            !entry.read ? 'font-semibold' : 'font-medium text-muted-foreground'
+            "mt-1 text-sm wrap-anywhere",
+            titleContainsUrl ? "line-clamp-3" : "line-clamp-2",
+            !entry.read ? "font-semibold" : "font-medium text-muted-foreground",
           )}
         >
           {displayTitle || fallbackTitle}
@@ -110,14 +112,14 @@ export const EntryListItem = forwardRef<HTMLDivElement, EntryListItemProps>(
         {displaySummary && (
           <div
             className={cn(
-              'mt-1 text-xs text-muted-foreground wrap-anywhere',
-              summaryContainsUrl ? 'line-clamp-3' : 'line-clamp-2'
+              "mt-1 text-xs text-muted-foreground wrap-anywhere",
+              summaryContainsUrl ? "line-clamp-3" : "line-clamp-2",
             )}
           >
             {displaySummary}
           </div>
         )}
       </div>
-    )
-  }
-)
+    );
+  },
+);

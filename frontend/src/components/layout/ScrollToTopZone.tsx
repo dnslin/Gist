@@ -1,4 +1,4 @@
-import { dispatchScrollToTop } from '@/hooks/useScrollToTop'
+import { dispatchScrollToTop } from "@/hooks/useScrollToTop";
 
 // Transparent tap zone covering the iOS safe-area-inset-top region (status bar area).
 // On iOS PWA standalone mode, this area is within the web view (viewport-fit=cover).
@@ -9,8 +9,8 @@ export function ScrollToTopZone() {
     <div
       onClick={() => dispatchScrollToTop()}
       className="fixed inset-x-0 top-0 z-50"
-      style={{ height: 'env(safe-area-inset-top, 0px)' }}
+      style={{ height: "env(safe-area-inset-top, 0px)" }}
       aria-hidden="true"
     />
-  )
+  );
 }

@@ -1,114 +1,117 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Plus, Trash2, Edit2, Check, X } from 'lucide-react'
+import { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import { Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import {
   getDomainRateLimits,
   createDomainRateLimit,
   updateDomainRateLimit,
   deleteDomainRateLimit,
-} from '@/api'
-import type { DomainRateLimit } from '@/types/settings'
-import { cn } from '@/lib/utils'
+} from "@/api";
+import type { DomainRateLimit } from "@/types/settings";
+import { cn } from "@/lib/utils";
 
 export function AdvancedSettings() {
-  const { t } = useTranslation()
-  const [items, setItems] = useState<DomainRateLimit[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { t } = useTranslation();
+  const [items, setItems] = useState<DomainRateLimit[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Add state
-  const [newHost, setNewHost] = useState('')
-  const [newInterval, setNewInterval] = useState('')
+  const [newHost, setNewHost] = useState("");
+  const [newInterval, setNewInterval] = useState("");
 
   // Edit state
-  const [editingHost, setEditingHost] = useState<string | null>(null)
-  const [editInterval, setEditInterval] = useState<number>(0)
+  const [editingHost, setEditingHost] = useState<string | null>(null);
+  const [editInterval, setEditInterval] = useState<number>(0);
 
   const loadData = useCallback(async () => {
     try {
-      const data = await getDomainRateLimits()
-      setItems(data.items)
+      const data = await getDomainRateLimits();
+      setItems(data.items);
     } catch {
       // ignore
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadData();
+  }, [loadData]);
 
   const isValidHostFormat = (h: string) => {
-    const trimmed = h.trim()
-    if (!trimmed) return false
-    if (trimmed === 'localhost') return true
+    const trimmed = h.trim();
+    if (!trimmed) return false;
+    if (trimmed === "localhost") return true;
 
     // IPv4 check
-    const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
-    if (ipv4Regex.test(trimmed)) return true
+    const ipv4Regex =
+      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    if (ipv4Regex.test(trimmed)) return true;
 
     // IPv6 check (simplified but robust enough for frontend)
-    if (trimmed.includes(':')) {
-      const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4})?::(([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4})?$/
-      return ipv6Regex.test(trimmed)
+    if (trimmed.includes(":")) {
+      const ipv6Regex =
+        /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^(([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4})?::(([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4})?$/;
+      return ipv6Regex.test(trimmed);
     }
 
     // Domain check (RFC 1123, requires at least one dot)
-    const domainRegex = /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
-    return domainRegex.test(trimmed)
-  }
+    const domainRegex =
+      /^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/;
+    return domainRegex.test(trimmed);
+  };
 
   const handleCreate = async () => {
-    if (!newHost.trim() || !isValidHostFormat(newHost)) return
+    if (!newHost.trim() || !isValidHostFormat(newHost)) return;
 
-    const interval = Math.max(0, parseInt(newInterval) || 0)
+    const interval = Math.max(0, parseInt(newInterval) || 0);
     try {
-      await createDomainRateLimit(newHost.trim(), interval)
-      setNewHost('')
-      setNewInterval('')
-      await loadData()
+      await createDomainRateLimit(newHost.trim(), interval);
+      setNewHost("");
+      setNewInterval("");
+      await loadData();
     } catch {
       // ignore
     }
-  }
+  };
 
   const startEdit = (item: DomainRateLimit) => {
-    setEditingHost(item.host)
-    setEditInterval(item.intervalSeconds)
-  }
+    setEditingHost(item.host);
+    setEditInterval(item.intervalSeconds);
+  };
 
   const cancelEdit = () => {
-    setEditingHost(null)
-    setEditInterval(0)
-  }
+    setEditingHost(null);
+    setEditInterval(0);
+  };
 
   const handleUpdate = async () => {
-    if (!editingHost) return
+    if (!editingHost) return;
     try {
-      await updateDomainRateLimit(editingHost, editInterval)
-      setEditingHost(null)
-      await loadData()
+      await updateDomainRateLimit(editingHost, editInterval);
+      setEditingHost(null);
+      await loadData();
     } catch {
       // ignore
     }
-  }
+  };
 
   const handleDelete = async (host: string) => {
-    if (!confirm(t('settings.confirm_delete') || 'Are you sure?')) return
+    if (!confirm(t("settings.confirm_delete") || "Are you sure?")) return;
     try {
-      await deleteDomainRateLimit(host)
-      await loadData()
+      await deleteDomainRateLimit(host);
+      await loadData();
     } catch {
       // ignore
     }
-  }
+  };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
-    )
+    );
   }
 
   return (
@@ -116,8 +119,12 @@ export function AdvancedSettings() {
       {/* Domain Rate Limits Section */}
       <section>
         <div className="mb-4">
-          <div className="text-sm font-medium">{t('settings.advanced_domain_limits')}</div>
-          <div className="text-xs text-muted-foreground">{t('settings.advanced_domain_limits_description')}</div>
+          <div className="text-sm font-medium">
+            {t("settings.advanced_domain_limits")}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {t("settings.advanced_domain_limits_description")}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -129,8 +136,8 @@ export function AdvancedSettings() {
               onChange={(e) => setNewHost(e.target.value)}
               placeholder="example.com"
               className={cn(
-                'h-9 min-w-[120px] flex-1 rounded-md border border-border bg-background px-3 text-sm',
-                'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                "h-9 min-w-[120px] flex-1 rounded-md border border-border bg-background px-3 text-sm",
+                "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
               )}
             />
             <div className="flex shrink-0 items-center gap-2">
@@ -139,10 +146,10 @@ export function AdvancedSettings() {
                 min="0"
                 value={newInterval}
                 onChange={(e) => setNewInterval(e.target.value)}
-                placeholder={t('settings.advanced_seconds')}
+                placeholder={t("settings.advanced_seconds")}
                 className={cn(
-                  'h-9 w-20 rounded-md border border-border bg-background px-3 text-sm',
-                  'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                  "h-9 w-20 rounded-md border border-border bg-background px-3 text-sm",
+                  "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
                 )}
               />
               <button
@@ -150,8 +157,8 @@ export function AdvancedSettings() {
                 onClick={handleCreate}
                 disabled={!newHost.trim() || !isValidHostFormat(newHost)}
                 className={cn(
-                  'flex size-9 items-center justify-center rounded-md border border-border bg-secondary text-secondary-foreground transition-colors hover:bg-secondary/80',
-                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                  "flex size-9 items-center justify-center rounded-md border border-border bg-secondary text-secondary-foreground transition-colors hover:bg-secondary/80",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
                 )}
               >
                 <Plus className="size-4" />
@@ -162,18 +169,21 @@ export function AdvancedSettings() {
           {/* List */}
           {items.length === 0 ? (
             <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              {t('settings.advanced_no_domains')}
+              {t("settings.advanced_no_domains")}
             </div>
           ) : (
             <div className="space-y-2">
               {items.map((item) => {
-                const isEditing = editingHost === item.host
+                const isEditing = editingHost === item.host;
                 return (
                   <div
                     key={item.id}
                     className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-2"
                   >
-                    <div className="min-w-[120px] flex-1 px-2 text-sm font-mono truncate" title={item.host}>
+                    <div
+                      className="min-w-[120px] flex-1 px-2 text-sm font-mono truncate"
+                      title={item.host}
+                    >
                       {item.host}
                     </div>
 
@@ -184,10 +194,14 @@ export function AdvancedSettings() {
                           min="0"
                           value={editInterval}
                           autoFocus
-                          onChange={(e) => setEditInterval(Math.max(0, parseInt(e.target.value) || 0))}
+                          onChange={(e) =>
+                            setEditInterval(
+                              Math.max(0, parseInt(e.target.value) || 0),
+                            )
+                          }
                           className={cn(
-                            'h-9 w-20 rounded-md border border-border bg-background px-3 text-sm',
-                            'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                            "h-9 w-20 rounded-md border border-border bg-background px-3 text-sm",
+                            "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
                           )}
                         />
                         <button
@@ -227,12 +241,12 @@ export function AdvancedSettings() {
                       </div>
                     )}
                   </div>
-                )
+                );
               })}
             </div>
           )}
         </div>
       </section>
     </div>
-  )
+  );
 }

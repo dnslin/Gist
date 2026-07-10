@@ -5,7 +5,12 @@
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "types": ["node", "vite/client", "vite-plugin-pwa/client", "vitest/globals"],
+    "types": [
+      "node",
+      "vite/client",
+      "vite-plugin-pwa/client",
+      "vitest/globals"
+    ],
     "skipLibCheck": true,
 
     /* Bundler mode */

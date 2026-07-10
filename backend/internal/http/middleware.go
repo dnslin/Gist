@@ -7,8 +7,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"gist/backend/pkg/logger"
 	"gist/backend/internal/service"
+	"gist/backend/pkg/logger"
 )
 
 // AuthCookieName is the name of the authentication cookie.

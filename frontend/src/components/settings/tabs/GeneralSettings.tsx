@@ -1,93 +1,109 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
-import { updateGeneralSettings } from '@/api'
-import { cn } from '@/lib/utils'
-import { Switch } from '@/components/ui/switch'
-import { SegmentedControl } from '@/components/ui/segmented-control'
-import { useGeneralSettings } from '@/hooks/useGeneralSettings'
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { updateGeneralSettings } from "@/api";
+import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { SegmentedControl } from "@/components/ui/segmented-control";
+import { useGeneralSettings } from "@/hooks/useGeneralSettings";
 
-type Language = 'zh' | 'en'
+type Language = "zh" | "en";
 
 export function GeneralSettings() {
-  const { t, i18n } = useTranslation()
-  const queryClient = useQueryClient()
-  const { data: generalSettings, isLoading: isGeneralSettingsLoading } = useGeneralSettings()
-  const [fallbackUA, setFallbackUA] = useState('')
-  const [autoReadability, setAutoReadability] = useState(false)
-  const [markReadOnScroll, setMarkReadOnScroll] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle')
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const { data: generalSettings, isLoading: isGeneralSettingsLoading } =
+    useGeneralSettings();
+  const [fallbackUA, setFallbackUA] = useState("");
+  const [autoReadability, setAutoReadability] = useState(false);
+  const [markReadOnScroll, setMarkReadOnScroll] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">(
+    "idle",
+  );
 
   useEffect(() => {
-    if (!generalSettings) return
+    if (!generalSettings) return;
 
-    setFallbackUA(generalSettings.fallbackUserAgent || '')
-    setAutoReadability(generalSettings.autoReadability || false)
-    setMarkReadOnScroll(generalSettings.markReadOnScroll || false)
-  }, [generalSettings])
+    setFallbackUA(generalSettings.fallbackUserAgent || "");
+    setAutoReadability(generalSettings.autoReadability || false);
+    setMarkReadOnScroll(generalSettings.markReadOnScroll || false);
+  }, [generalSettings]);
 
-  const settingsDisabled = isGeneralSettingsLoading || !generalSettings
+  const settingsDisabled = isGeneralSettingsLoading || !generalSettings;
 
   const handleSaveFallbackUA = async () => {
-    if (!generalSettings) return
+    if (!generalSettings) return;
 
-    setIsSaving(true)
-    setSaveStatus('idle')
-    try {
-      await updateGeneralSettings({ fallbackUserAgent: fallbackUA, autoReadability, markReadOnScroll })
-      queryClient.invalidateQueries({ queryKey: ['generalSettings'] })
-      setSaveStatus('success')
-      setTimeout(() => setSaveStatus('idle'), 2000)
-    } catch {
-      setSaveStatus('error')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleAutoReadabilityChange = useCallback(async (checked: boolean) => {
-    if (!generalSettings) return
-
-    setAutoReadability(checked)
+    setIsSaving(true);
+    setSaveStatus("idle");
     try {
       await updateGeneralSettings({
-        fallbackUserAgent: generalSettings.fallbackUserAgent,
-        autoReadability: checked,
-        markReadOnScroll,
-      })
-      queryClient.invalidateQueries({ queryKey: ['generalSettings'] })
-    } catch {
-      // Revert on error
-      setAutoReadability(!checked)
-    }
-  }, [generalSettings, markReadOnScroll, queryClient])
-
-  const handleMarkReadOnScrollChange = useCallback(async (checked: boolean) => {
-    if (!generalSettings) return
-
-    setMarkReadOnScroll(checked)
-    try {
-      await updateGeneralSettings({
-        fallbackUserAgent: generalSettings.fallbackUserAgent,
+        fallbackUserAgent: fallbackUA,
         autoReadability,
-        markReadOnScroll: checked,
-      })
-      queryClient.invalidateQueries({ queryKey: ['generalSettings'] })
+        markReadOnScroll,
+      });
+      queryClient.invalidateQueries({ queryKey: ["generalSettings"] });
+      setSaveStatus("success");
+      setTimeout(() => setSaveStatus("idle"), 2000);
     } catch {
-      setMarkReadOnScroll(!checked)
+      setSaveStatus("error");
+    } finally {
+      setIsSaving(false);
     }
-  }, [autoReadability, generalSettings, queryClient])
+  };
 
-  const languageOptions = useMemo(() => [
-    { value: 'zh' as Language, label: t('language.zh') },
-    { value: 'en' as Language, label: t('language.en') },
-  ], [t])
+  const handleAutoReadabilityChange = useCallback(
+    async (checked: boolean) => {
+      if (!generalSettings) return;
+
+      setAutoReadability(checked);
+      try {
+        await updateGeneralSettings({
+          fallbackUserAgent: generalSettings.fallbackUserAgent,
+          autoReadability: checked,
+          markReadOnScroll,
+        });
+        queryClient.invalidateQueries({ queryKey: ["generalSettings"] });
+      } catch {
+        // Revert on error
+        setAutoReadability(!checked);
+      }
+    },
+    [generalSettings, markReadOnScroll, queryClient],
+  );
+
+  const handleMarkReadOnScrollChange = useCallback(
+    async (checked: boolean) => {
+      if (!generalSettings) return;
+
+      setMarkReadOnScroll(checked);
+      try {
+        await updateGeneralSettings({
+          fallbackUserAgent: generalSettings.fallbackUserAgent,
+          autoReadability,
+          markReadOnScroll: checked,
+        });
+        queryClient.invalidateQueries({ queryKey: ["generalSettings"] });
+      } catch {
+        setMarkReadOnScroll(!checked);
+      }
+    },
+    [autoReadability, generalSettings, queryClient],
+  );
+
+  const languageOptions = useMemo(
+    () => [
+      { value: "zh" as Language, label: t("language.zh") },
+      { value: "en" as Language, label: t("language.en") },
+    ],
+    [t],
+  );
 
   const changeLanguage = (lng: Language) => {
-    i18n.changeLanguage(lng)
-    localStorage.setItem('gist-lang', lng)
-  }
+    i18n.changeLanguage(lng);
+    localStorage.setItem("gist-lang", lng);
+  };
 
   return (
     <div className="space-y-6">
@@ -95,12 +111,14 @@ export function GeneralSettings() {
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-sm font-medium">{t('language.label')}</div>
-            <div className="text-xs text-muted-foreground">{t('language.description')}</div>
+            <div className="text-sm font-medium">{t("language.label")}</div>
+            <div className="text-xs text-muted-foreground">
+              {t("language.description")}
+            </div>
           </div>
           <SegmentedControl
             className="shrink-0"
-            value={(i18n.language as Language) || 'zh'}
+            value={(i18n.language as Language) || "zh"}
             onValueChange={changeLanguage}
             options={languageOptions}
           />
@@ -111,8 +129,12 @@ export function GeneralSettings() {
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-sm font-medium">{t('settings.auto_readability')}</div>
-            <div className="text-xs text-muted-foreground">{t('settings.auto_readability_description')}</div>
+            <div className="text-sm font-medium">
+              {t("settings.auto_readability")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("settings.auto_readability_description")}
+            </div>
           </div>
           <Switch
             checked={autoReadability}
@@ -126,8 +148,12 @@ export function GeneralSettings() {
       <section>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-sm font-medium">{t('settings.mark_read_on_scroll')}</div>
-            <div className="text-xs text-muted-foreground">{t('settings.mark_read_on_scroll_description')}</div>
+            <div className="text-sm font-medium">
+              {t("settings.mark_read_on_scroll")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("settings.mark_read_on_scroll_description")}
+            </div>
           </div>
           <Switch
             checked={markReadOnScroll}
@@ -140,12 +166,16 @@ export function GeneralSettings() {
       {/* Advanced Section */}
       <section>
         <div className="mb-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {t('settings.advanced')}
+          {t("settings.advanced")}
         </div>
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="text-sm font-medium">{t('settings.fallback_ua')}</div>
-            <div className="text-xs text-muted-foreground">{t('settings.fallback_ua_description')}</div>
+            <div className="text-sm font-medium">
+              {t("settings.fallback_ua")}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {t("settings.fallback_ua_description")}
+            </div>
           </div>
           <div className="flex shrink-0 gap-2">
             <input
@@ -153,11 +183,11 @@ export function GeneralSettings() {
               value={fallbackUA}
               onChange={(e) => setFallbackUA(e.target.value)}
               disabled={settingsDisabled}
-              placeholder={t('settings.fallback_ua_placeholder')}
+              placeholder={t("settings.fallback_ua_placeholder")}
               className={cn(
-                'h-9 w-64 max-w-full rounded-md border border-border bg-background px-3 text-sm',
-                'placeholder:text-muted-foreground/50',
-                'focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary'
+                "h-9 w-64 max-w-full rounded-md border border-border bg-background px-3 text-sm",
+                "placeholder:text-muted-foreground/50",
+                "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary",
               )}
             />
             <button
@@ -165,19 +195,22 @@ export function GeneralSettings() {
               onClick={handleSaveFallbackUA}
               disabled={isSaving || settingsDisabled}
               className={cn(
-                'h-9 rounded-md px-3 text-sm font-medium transition-colors shrink-0',
-                'bg-primary text-primary-foreground hover:bg-primary/90',
-                'disabled:cursor-not-allowed disabled:opacity-50',
-                saveStatus === 'success' && 'bg-green-600 hover:bg-green-600',
-                saveStatus === 'error' && 'bg-destructive hover:bg-destructive'
+                "h-9 rounded-md px-3 text-sm font-medium transition-colors shrink-0",
+                "bg-primary text-primary-foreground hover:bg-primary/90",
+                "disabled:cursor-not-allowed disabled:opacity-50",
+                saveStatus === "success" && "bg-green-600 hover:bg-green-600",
+                saveStatus === "error" && "bg-destructive hover:bg-destructive",
               )}
             >
-              {isSaving ? t('settings.saving') : saveStatus === 'success' ? t('settings.saved') : t('settings.save')}
+              {isSaving
+                ? t("settings.saving")
+                : saveStatus === "success"
+                  ? t("settings.saved")
+                  : t("settings.save")}
             </button>
           </div>
         </div>
       </section>
-
     </div>
-  )
+  );
 }

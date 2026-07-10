@@ -1,27 +1,35 @@
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import type { SettingsTab } from './SettingsModal'
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import type { SettingsTab } from "./SettingsModal";
 
 interface SettingsSidebarProps {
-  activeTab: SettingsTab
-  onTabChange: (tab: SettingsTab) => void
+  activeTab: SettingsTab;
+  onTabChange: (tab: SettingsTab) => void;
 }
 
 interface NavItem {
-  id: SettingsTab
-  label: string
-  icon: React.ReactNode
+  id: SettingsTab;
+  label: string;
+  icon: React.ReactNode;
 }
 
-export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps) {
-  const { t } = useTranslation()
+export function SettingsSidebar({
+  activeTab,
+  onTabChange,
+}: SettingsSidebarProps) {
+  const { t } = useTranslation();
 
   const navItems: NavItem[] = [
     {
-      id: 'general',
-      label: t('settings.general'),
+      id: "general",
+      label: t("settings.general"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -38,10 +46,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
       ),
     },
     {
-      id: 'network',
-      label: t('settings.network'),
+      id: "network",
+      label: t("settings.network"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -52,10 +65,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
       ),
     },
     {
-      id: 'appearance',
-      label: t('settings.appearance'),
+      id: "appearance",
+      label: t("settings.appearance"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -66,10 +84,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
       ),
     },
     {
-      id: 'ai',
-      label: t('settings.ai'),
+      id: "ai",
+      label: t("settings.ai"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -80,10 +103,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
       ),
     },
     {
-      id: 'data',
-      label: t('settings.data'),
+      id: "data",
+      label: t("settings.data"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -94,10 +122,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
       ),
     },
     {
-      id: 'feeds',
-      label: t('settings.subscriptions'),
+      id: "feeds",
+      label: t("settings.subscriptions"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -108,10 +141,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
       ),
     },
     {
-      id: 'folders',
-      label: t('settings.folders'),
+      id: "folders",
+      label: t("settings.folders"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -122,10 +160,15 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
       ),
     },
     {
-      id: 'advanced',
-      label: t('settings.advanced'),
+      id: "advanced",
+      label: t("settings.advanced"),
       icon: (
-        <svg className="size-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="size-[18px]"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -135,7 +178,7 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
         </svg>
       ),
     },
-  ]
+  ];
 
   return (
     <div className="flex min-w-[180px] max-w-[200px] flex-col border-r border-border bg-sidebar px-2 py-6">
@@ -153,10 +196,10 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
             type="button"
             onClick={() => onTabChange(item.id)}
             className={cn(
-              'flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium transition-colors',
+              "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium transition-colors",
               activeTab === item.id
-                ? 'bg-item-active text-foreground'
-                : 'text-muted-foreground hover:bg-item-hover hover:text-foreground'
+                ? "bg-item-active text-foreground"
+                : "text-muted-foreground hover:bg-item-hover hover:text-foreground",
             )}
           >
             <span className="shrink-0 text-primary/70">{item.icon}</span>
@@ -165,5 +208,5 @@ export function SettingsSidebar({ activeTab, onTabChange }: SettingsSidebarProps
         ))}
       </nav>
     </div>
-  )
+  );
 }

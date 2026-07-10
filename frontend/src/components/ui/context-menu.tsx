@@ -1,13 +1,13 @@
-import * as React from 'react'
-import * as ContextMenuPrimitive from '@radix-ui/react-context-menu'
-import { cn } from '@/lib/utils'
+import * as React from "react";
+import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
+import { cn } from "@/lib/utils";
 
-const ContextMenu = ContextMenuPrimitive.Root
-const ContextMenuTrigger = ContextMenuPrimitive.Trigger
-const ContextMenuGroup = ContextMenuPrimitive.Group
-const ContextMenuPortal = ContextMenuPrimitive.Portal
-const ContextMenuSub = ContextMenuPrimitive.Sub
-const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup
+const ContextMenu = ContextMenuPrimitive.Root;
+const ContextMenuTrigger = ContextMenuPrimitive.Trigger;
+const ContextMenuGroup = ContextMenuPrimitive.Group;
+const ContextMenuPortal = ContextMenuPrimitive.Portal;
+const ContextMenuSub = ContextMenuPrimitive.Sub;
+const ContextMenuRadioGroup = ContextMenuPrimitive.RadioGroup;
 
 const ContextMenuContent = React.forwardRef<
   React.ComponentRef<typeof ContextMenuPrimitive.Content>,
@@ -17,11 +17,11 @@ const ContextMenuContent = React.forwardRef<
     <ContextMenuPrimitive.Content
       ref={ref}
       className={cn(
-        'dropdown-content dropdown-surface',
-        'relative z-50 min-w-32 overflow-hidden rounded-md p-1',
-        'border border-border/60 bg-popover/95 text-popover-foreground',
-        'backdrop-blur-xl',
-        className
+        "dropdown-content dropdown-surface",
+        "relative z-50 min-w-32 overflow-hidden rounded-md p-1",
+        "border border-border/60 bg-popover/95 text-popover-foreground",
+        "backdrop-blur-xl",
+        className,
       )}
       {...props}
     >
@@ -29,48 +29,48 @@ const ContextMenuContent = React.forwardRef<
       <div className="relative">{children}</div>
     </ContextMenuPrimitive.Content>
   </ContextMenuPrimitive.Portal>
-))
-ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName
+));
+ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName;
 
 const ContextMenuItem = React.forwardRef<
   React.ComponentRef<typeof ContextMenuPrimitive.Item>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Item> & {
-    inset?: boolean
+    inset?: boolean;
   }
 >(({ className, inset, ...props }, ref) => (
   <ContextMenuPrimitive.Item
     ref={ref}
     className={cn(
-      'group relative flex cursor-pointer select-none items-center rounded-[5px]',
-      'px-2.5 py-1 h-[28px] text-sm outline-none',
-      'transition-colors duration-100',
-      'focus:bg-accent/30 data-[highlighted]:bg-accent/20',
-      'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-      inset && 'pl-8',
-      className
+      "group relative flex cursor-pointer select-none items-center rounded-[5px]",
+      "px-2.5 py-1 h-[28px] text-sm outline-none",
+      "transition-colors duration-100",
+      "focus:bg-accent/30 data-[highlighted]:bg-accent/20",
+      "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      inset && "pl-8",
+      className,
     )}
     {...props}
   />
-))
-ContextMenuItem.displayName = ContextMenuPrimitive.Item.displayName
+));
+ContextMenuItem.displayName = ContextMenuPrimitive.Item.displayName;
 
 const ContextMenuLabel = React.forwardRef<
   React.ComponentRef<typeof ContextMenuPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Label> & {
-    inset?: boolean
+    inset?: boolean;
   }
 >(({ className, inset, ...props }, ref) => (
   <ContextMenuPrimitive.Label
     ref={ref}
     className={cn(
-      'px-2 py-1.5 text-sm font-semibold',
-      inset && 'pl-8',
-      className
+      "px-2 py-1.5 text-sm font-semibold",
+      inset && "pl-8",
+      className,
     )}
     {...props}
   />
-))
-ContextMenuLabel.displayName = ContextMenuPrimitive.Label.displayName
+));
+ContextMenuLabel.displayName = ContextMenuPrimitive.Label.displayName;
 
 const ContextMenuSeparator = React.forwardRef<
   React.ComponentRef<typeof ContextMenuPrimitive.Separator>,
@@ -78,28 +78,28 @@ const ContextMenuSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ContextMenuPrimitive.Separator
     ref={ref}
-    className={cn('mx-2 my-1.5 h-px bg-border/70', className)}
+    className={cn("mx-2 my-1.5 h-px bg-border/70", className)}
     {...props}
   />
-))
-ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName
+));
+ContextMenuSeparator.displayName = ContextMenuPrimitive.Separator.displayName;
 
 const ContextMenuSubTrigger = React.forwardRef<
   React.ComponentRef<typeof ContextMenuPrimitive.SubTrigger>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubTrigger> & {
-    inset?: boolean
+    inset?: boolean;
   }
 >(({ className, inset, children, ...props }, ref) => (
   <ContextMenuPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      'group relative flex cursor-pointer select-none items-center rounded-[5px]',
-      'px-2.5 py-1 h-[28px] text-sm outline-none',
-      'transition-colors duration-100',
-      'focus:bg-accent/30 data-[highlighted]:bg-accent/20',
-      'data-[state=open]:bg-accent/30',
-      inset && 'pl-8',
-      className
+      "group relative flex cursor-pointer select-none items-center rounded-[5px]",
+      "px-2.5 py-1 h-[28px] text-sm outline-none",
+      "transition-colors duration-100",
+      "focus:bg-accent/30 data-[highlighted]:bg-accent/20",
+      "data-[state=open]:bg-accent/30",
+      inset && "pl-8",
+      className,
     )}
     {...props}
   >
@@ -116,8 +116,8 @@ const ContextMenuSubTrigger = React.forwardRef<
       <path d="m9 18 6-6-6-6" />
     </svg>
   </ContextMenuPrimitive.SubTrigger>
-))
-ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName
+));
+ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName;
 
 const ContextMenuSubContent = React.forwardRef<
   React.ComponentRef<typeof ContextMenuPrimitive.SubContent>,
@@ -127,17 +127,17 @@ const ContextMenuSubContent = React.forwardRef<
     <ContextMenuPrimitive.SubContent
       ref={ref}
       className={cn(
-        'dropdown-content dropdown-surface',
-        'relative z-50 min-w-32 overflow-hidden rounded-md p-1',
-        'border border-border/60 bg-popover/95 text-popover-foreground',
-        'backdrop-blur-xl',
-        className
+        "dropdown-content dropdown-surface",
+        "relative z-50 min-w-32 overflow-hidden rounded-md p-1",
+        "border border-border/60 bg-popover/95 text-popover-foreground",
+        "backdrop-blur-xl",
+        className,
       )}
       {...props}
     />
   </ContextMenuPrimitive.Portal>
-))
-ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName
+));
+ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName;
 
 export {
   ContextMenu,
@@ -152,4 +152,4 @@ export {
   ContextMenuSubTrigger,
   ContextMenuSubContent,
   ContextMenuRadioGroup,
-}
+};

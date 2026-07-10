@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"strings"
 
-	"gist/backend/pkg/logger"
 	"gist/backend/internal/model"
 	"gist/backend/internal/repository"
+	"gist/backend/pkg/logger"
 )
 
 type FolderService interface {

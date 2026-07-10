@@ -7,8 +7,8 @@ import (
 
 	_ "gist/backend/docs"
 	"gist/backend/internal/handler"
-	"gist/backend/pkg/logger"
 	"gist/backend/internal/service"
+	"gist/backend/pkg/logger"
 )
 
 func NewRouter(

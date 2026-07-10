@@ -1,21 +1,21 @@
-import { create } from 'zustand'
+import { create } from "zustand";
 
 interface ImagePreviewState {
-  isOpen: boolean
-  images: string[]
-  currentIndex: number
+  isOpen: boolean;
+  images: string[];
+  currentIndex: number;
 
-  open: (images: string[], startIndex?: number) => void
-  close: () => void
-  reset: () => void
-  setIndex: (index: number) => void
+  open: (images: string[], startIndex?: number) => void;
+  close: () => void;
+  reset: () => void;
+  setIndex: (index: number) => void;
 }
 
 const initialState = {
   isOpen: false,
   images: [] as string[],
   currentIndex: 0,
-}
+};
 
 export const useImagePreviewStore = create<ImagePreviewState>((set, get) => ({
   ...initialState,
@@ -25,21 +25,21 @@ export const useImagePreviewStore = create<ImagePreviewState>((set, get) => ({
       isOpen: true,
       images,
       currentIndex: startIndex,
-    })
+    });
   },
 
   close: () => {
-    set({ isOpen: false })
+    set({ isOpen: false });
   },
 
   reset: () => {
-    set(initialState)
+    set(initialState);
   },
 
   setIndex: (index) => {
-    const { images } = get()
+    const { images } = get();
     if (index >= 0 && index < images.length) {
-      set({ currentIndex: index })
+      set({ currentIndex: index });
     }
   },
-}))
+}));

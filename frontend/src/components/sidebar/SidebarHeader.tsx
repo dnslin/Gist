@@ -1,36 +1,36 @@
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import { AddIcon } from '@/components/ui/icons'
-import { ProfileButton } from './ProfileButton'
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import { AddIcon } from "@/components/ui/icons";
+import { ProfileButton } from "./ProfileButton";
 
 const actionButtonStyles = cn(
-  'inline-flex items-center justify-center',
-  'rounded-md size-8',
-  'hover:bg-accent/50 transition-colors duration-200',
-  'disabled:cursor-not-allowed disabled:opacity-50'
-)
+  "inline-flex items-center justify-center",
+  "rounded-md size-8",
+  "hover:bg-accent/50 transition-colors duration-200",
+  "disabled:cursor-not-allowed disabled:opacity-50",
+);
 
 interface SidebarHeaderProps {
-  title?: string
-  avatarUrl?: string
-  userName?: string
-  starredCount?: number
-  isStarredSelected?: boolean
-  onAddClick?: () => void
-  onStarredClick?: () => void
-  onProfileClick?: () => void
-  onSettingsClick?: () => void
-  onLogoutClick?: () => void
+  title?: string;
+  avatarUrl?: string;
+  userName?: string;
+  starredCount?: number;
+  isStarredSelected?: boolean;
+  onAddClick?: () => void;
+  onStarredClick?: () => void;
+  onProfileClick?: () => void;
+  onSettingsClick?: () => void;
+  onLogoutClick?: () => void;
 }
 
 function GistLogo({ className }: { className?: string }) {
   return (
-    <img src="/logo.svg" alt="Gist" className={cn(className, 'rounded')} />
-  )
+    <img src="/logo.svg" alt="Gist" className={cn(className, "rounded")} />
+  );
 }
 
 export function SidebarHeader({
-  title = 'Gist',
+  title = "Gist",
   avatarUrl,
   userName,
   starredCount,
@@ -41,8 +41,8 @@ export function SidebarHeader({
   onSettingsClick,
   onLogoutClick,
 }: SidebarHeaderProps) {
-  const { t } = useTranslation()
-  const displayName = userName || t('user.guest')
+  const { t } = useTranslation();
+  const displayName = userName || t("user.guest");
 
   return (
     <div className="flex items-center justify-between px-3 pt-2.5 pb-2">
@@ -59,7 +59,7 @@ export function SidebarHeader({
           type="button"
           className={actionButtonStyles}
           onClick={onAddClick}
-          aria-label={t('actions.add_feed')}
+          aria-label={t("actions.add_feed")}
         >
           <AddIcon className="size-5 text-muted-foreground" />
         </button>
@@ -77,5 +77,5 @@ export function SidebarHeader({
         />
       </div>
     </div>
-  )
+  );
 }

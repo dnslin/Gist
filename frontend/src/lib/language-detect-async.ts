@@ -1,32 +1,32 @@
-type LanguageDetectModule = typeof import('./language-detect')
+type LanguageDetectModule = typeof import("./language-detect");
 
-let languageDetectModulePromise: Promise<LanguageDetectModule> | null = null
+let languageDetectModulePromise: Promise<LanguageDetectModule> | null = null;
 
 async function getLanguageDetectModule() {
   if (!languageDetectModulePromise) {
-    languageDetectModulePromise = import('./language-detect')
+    languageDetectModulePromise = import("./language-detect");
   }
-  return languageDetectModulePromise
+  return languageDetectModulePromise;
 }
 
 export async function detectLanguage(text: string): Promise<string | null> {
-  const module = await getLanguageDetectModule()
-  return module.detectLanguage(text)
+  const module = await getLanguageDetectModule();
+  return module.detectLanguage(text);
 }
 
 export async function isTargetLanguage(
   text: string,
-  targetLanguage: string
+  targetLanguage: string,
 ): Promise<boolean> {
-  const module = await getLanguageDetectModule()
-  return module.isTargetLanguage(text, targetLanguage)
+  const module = await getLanguageDetectModule();
+  return module.isTargetLanguage(text, targetLanguage);
 }
 
 export async function needsTranslation(
   title: string,
   summary: string | null,
-  targetLanguage: string
+  targetLanguage: string,
 ): Promise<boolean> {
-  const module = await getLanguageDetectModule()
-  return module.needsTranslation(title, summary, targetLanguage)
+  const module = await getLanguageDetectModule();
+  return module.needsTranslation(title, summary, targetLanguage);
 }

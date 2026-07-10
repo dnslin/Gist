@@ -5,8 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"gist/backend/pkg/logger"
 	"gist/backend/internal/service"
+	"gist/backend/pkg/logger"
 )
 
 type Scheduler struct {

@@ -57,24 +57,24 @@ docker run -d \
 
 ### 镜像标签
 
-| 标签 | 说明 |
-|------|------|
-| `latest` | 最新稳定版 |
-| `1.2.0` | 指定版本 |
-| `1.2` | 该 minor 版本的最新 patch |
-| `1` | 该 major 版本的最新 minor |
+| 标签      | 说明                         |
+| --------- | ---------------------------- |
+| `latest`  | 最新稳定版                   |
+| `1.2.0`   | 指定版本                     |
+| `1.2`     | 该 minor 版本的最新 patch    |
+| `1`       | 该 major 版本的最新 minor    |
 | `develop` | 每次推送 `main` 分支自动构建 |
 
 所有镜像均为多架构 (`linux/amd64`, `linux/arm64`)。
 
 ### 环境变量
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `GIST_ADDR` | `:8080` | 监听地址 |
-| `GIST_DATA_DIR` | `/app/data` | 数据目录 |
-| `GIST_STATIC_DIR` | `/app/static` | 静态文件目录 |
-| `GIST_LOG_LEVEL` | `info` | 日志级别 (`debug` / `info` / `warn` / `error`) |
+| 变量              | 默认值        | 说明                                           |
+| ----------------- | ------------- | ---------------------------------------------- |
+| `GIST_ADDR`       | `:8080`       | 监听地址                                       |
+| `GIST_DATA_DIR`   | `/app/data`   | 数据目录                                       |
+| `GIST_STATIC_DIR` | `/app/static` | 静态文件目录                                   |
+| `GIST_LOG_LEVEL`  | `info`        | 日志级别 (`debug` / `info` / `warn` / `error`) |
 
 ## 本地开发
 

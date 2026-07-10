@@ -15,8 +15,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"gist/backend/pkg/logger"
 	"gist/backend/internal/repository"
+	"gist/backend/pkg/logger"
 )
 
 // usernameRegex validates username format: lowercase letters and numbers only, starts with letter

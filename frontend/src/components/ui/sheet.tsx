@@ -1,32 +1,32 @@
-import { useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface SheetProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  children: React.ReactNode
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
 }
 
 export function Sheet({ open, onOpenChange, children }: SheetProps) {
   // Handle escape key and body scroll lock
   useEffect(() => {
-    if (!open) return
+    if (!open) return;
 
-    document.body.style.overflow = 'hidden'
+    document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onOpenChange(false)
+      if (e.key === "Escape") {
+        onOpenChange(false);
       }
-    }
-    document.addEventListener('keydown', handleKeyDown)
+    };
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = ''
-      document.removeEventListener('keydown', handleKeyDown)
-    }
-  }, [open, onOpenChange])
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open, onOpenChange]);
 
   return (
     <AnimatePresence>
@@ -45,12 +45,12 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
             }}
             transition={{ duration: 0.2 }}
             className={cn(
-              'fixed z-50 bg-black/50',
+              "fixed z-50 bg-black/50",
               // Extend to cover safe area (notch/home indicator)
-              'top-[calc(-1*env(safe-area-inset-top,0px))]',
-              'bottom-[calc(-1*env(safe-area-inset-bottom,0px))]',
-              'left-[calc(-1*env(safe-area-inset-left,0px))]',
-              'right-[calc(-1*env(safe-area-inset-right,0px))]'
+              "top-[calc(-1*env(safe-area-inset-top,0px))]",
+              "bottom-[calc(-1*env(safe-area-inset-bottom,0px))]",
+              "left-[calc(-1*env(safe-area-inset-left,0px))]",
+              "right-[calc(-1*env(safe-area-inset-right,0px))]",
             )}
             onClick={() => onOpenChange(false)}
           />
@@ -62,18 +62,18 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
             dragElastic={{ left: 0.1, right: 0 }}
             onDragEnd={(_, info) => {
               if (info.offset.x < -50 || info.velocity.x < -300) {
-                onOpenChange(false)
+                onOpenChange(false);
               }
             }}
             variants={{
               open: { x: 0 },
-              closed: { x: '-100%' },
+              closed: { x: "-100%" },
             }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className={cn(
-              'fixed inset-y-0 left-0 z-50 bg-sidebar shadow-xl',
-              'w-[280px] safe-area-top',
-              'touch-none'
+              "fixed inset-y-0 left-0 z-50 bg-sidebar shadow-xl",
+              "w-[280px] safe-area-top",
+              "touch-none",
             )}
           >
             {children}
@@ -81,5 +81,5 @@ export function Sheet({ open, onOpenChange, children }: SheetProps) {
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }

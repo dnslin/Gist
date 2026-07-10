@@ -1,39 +1,52 @@
-import { useEffect, useCallback, useState, useRef, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { AnimatePresence, motion } from 'framer-motion'
-import useEmblaCarousel from 'embla-carousel-react'
-import { Play } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { isVideoThumbnail } from '@/lib/media-utils'
-import { formatRelativeTime } from '@/lib/date-utils'
-import { stripHtml } from '@/lib/html-utils'
-import { useMarkAsRead, useMarkAsStarred, useRemoveFromUnreadList } from '@/hooks/useEntries'
-import { useLightboxStore } from '@/stores/lightbox-store'
-import { FeedIcon } from '@/components/ui/feed-icon'
+import { useEffect, useCallback, useState, useRef, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from "framer-motion";
+import useEmblaCarousel from "embla-carousel-react";
+import { Play } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { isVideoThumbnail } from "@/lib/media-utils";
+import { formatRelativeTime } from "@/lib/date-utils";
+import { stripHtml } from "@/lib/html-utils";
+import {
+  useMarkAsRead,
+  useMarkAsStarred,
+  useRemoveFromUnreadList,
+} from "@/hooks/useEntries";
+import { useLightboxStore } from "@/stores/lightbox-store";
+import { FeedIcon } from "@/components/ui/feed-icon";
 
 export function Lightbox() {
-  const { t } = useTranslation()
-  const { isOpen, entry, feed, images, currentIndex, close, reset, setIndex, updateEntryStarred } =
-    useLightboxStore()
-  const { mutate: markAsRead } = useMarkAsRead()
-  const { mutate: markAsStarred } = useMarkAsStarred()
-  const removeFromUnreadList = useRemoveFromUnreadList()
+  const { t } = useTranslation();
+  const {
+    isOpen,
+    entry,
+    feed,
+    images,
+    currentIndex,
+    close,
+    reset,
+    setIndex,
+    updateEntryStarred,
+  } = useLightboxStore();
+  const { mutate: markAsRead } = useMarkAsRead();
+  const { mutate: markAsStarred } = useMarkAsStarred();
+  const removeFromUnreadList = useRemoveFromUnreadList();
 
   // Track which entries have been marked as read to avoid duplicate calls
-  const markedAsReadRef = useRef<Set<string>>(new Set())
+  const markedAsReadRef = useRef<Set<string>>(new Set());
 
   // Track pointer position to distinguish click from drag in carousel
-  const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
-  const scrollLockYRef = useRef(0)
-  const touchMoveHandlerRef = useRef<((e: TouchEvent) => void) | null>(null)
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null);
+  const scrollLockYRef = useRef(0);
+  const touchMoveHandlerRef = useRef<((e: TouchEvent) => void) | null>(null);
 
   // Track if index change is from embla interaction (to avoid scrollTo interrupting animation)
-  const isEmblaNavigatingRef = useRef(false)
+  const isEmblaNavigatingRef = useRef(false);
 
   // Capture initial index when lightbox opens to avoid reInit on every currentIndex change
-  const initialIndexRef = useRef(currentIndex)
+  const initialIndexRef = useRef(currentIndex);
   if (!isOpen) {
-    initialIndexRef.current = currentIndex
+    initialIndexRef.current = currentIndex;
   }
 
   // Memoize options to prevent unnecessary reInit (which would skip animations)
@@ -47,191 +60,200 @@ export function Lightbox() {
     }),
     // Only recreate options when lightbox opens (images change)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [images]
-  )
+    [images],
+  );
 
-  const [emblaRef, emblaApi] = useEmblaCarousel(emblaOptions)
+  const [emblaRef, emblaApi] = useEmblaCarousel(emblaOptions);
 
-  const [iconError, setIconError] = useState(false)
-  const showIcon = feed?.iconPath && !iconError
+  const [iconError, setIconError] = useState(false);
+  const showIcon = feed?.iconPath && !iconError;
 
   // Mark entry as read when lightbox opens
   // This is done here instead of in PictureItem to avoid race condition
   // when unreadOnly filter is enabled (list item would disappear before lightbox opens)
   // Use skipInvalidate to prevent list refresh while lightbox is open
   useEffect(() => {
-    if (isOpen && entry && !entry.read && !markedAsReadRef.current.has(entry.id)) {
-      markedAsReadRef.current.add(entry.id)
-      markAsRead({ id: entry.id, read: true, skipInvalidate: true })
+    if (
+      isOpen &&
+      entry &&
+      !entry.read &&
+      !markedAsReadRef.current.has(entry.id)
+    ) {
+      markedAsReadRef.current.add(entry.id);
+      markAsRead({ id: entry.id, read: true, skipInvalidate: true });
     }
-  }, [isOpen, entry, markAsRead])
+  }, [isOpen, entry, markAsRead]);
 
   // When lightbox closes, remove read entries from unreadOnly list
   // This deferred removal prevents white screen on mobile when unreadOnly is enabled
   useEffect(() => {
     if (!isOpen && markedAsReadRef.current.size > 0) {
-      removeFromUnreadList(markedAsReadRef.current)
-      markedAsReadRef.current.clear()
+      removeFromUnreadList(markedAsReadRef.current);
+      markedAsReadRef.current.clear();
     }
-  }, [isOpen, removeFromUnreadList])
+  }, [isOpen, removeFromUnreadList]);
 
   // Sync embla with store
   useEffect(() => {
-    if (!emblaApi) return
+    if (!emblaApi) return;
 
     const onSelect = () => {
       // Mark that this index change is from embla interaction
-      isEmblaNavigatingRef.current = true
-      const index = emblaApi.selectedScrollSnap()
-      setIndex(index)
-    }
+      isEmblaNavigatingRef.current = true;
+      const index = emblaApi.selectedScrollSnap();
+      setIndex(index);
+    };
 
-    emblaApi.on('select', onSelect)
+    emblaApi.on("select", onSelect);
     return () => {
-      emblaApi.off('select', onSelect)
-    }
-  }, [emblaApi, setIndex])
+      emblaApi.off("select", onSelect);
+    };
+  }, [emblaApi, setIndex]);
 
   // Scroll to index when store changes (from external source, not embla)
   useEffect(() => {
     // Skip if change is from embla navigation (would interrupt animation)
     if (isEmblaNavigatingRef.current) {
-      isEmblaNavigatingRef.current = false
-      return
+      isEmblaNavigatingRef.current = false;
+      return;
     }
     if (emblaApi && emblaApi.selectedScrollSnap() !== currentIndex) {
-      emblaApi.scrollTo(currentIndex)
+      emblaApi.scrollTo(currentIndex);
     }
-  }, [emblaApi, currentIndex])
+  }, [emblaApi, currentIndex]);
 
   // Keyboard navigation
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key) {
-        case 'Escape':
-          close()
-          break
-        case 'ArrowLeft':
-          emblaApi?.scrollPrev()
-          break
-        case 'ArrowRight':
-          emblaApi?.scrollNext()
-          break
+        case "Escape":
+          close();
+          break;
+        case "ArrowLeft":
+          emblaApi?.scrollPrev();
+          break;
+        case "ArrowRight":
+          emblaApi?.scrollNext();
+          break;
       }
-    }
+    };
 
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, close, emblaApi])
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, close, emblaApi]);
 
   // Prevent body scroll when open. iOS PWA avoids position: fixed to prevent white bar.
   useEffect(() => {
     const isIOS =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const isStandalone =
-      (typeof window.matchMedia === 'function' &&
-        window.matchMedia('(display-mode: standalone)').matches) ||
-      (navigator as Navigator & { standalone?: boolean }).standalone === true
+      (typeof window.matchMedia === "function" &&
+        window.matchMedia("(display-mode: standalone)").matches) ||
+      (navigator as Navigator & { standalone?: boolean }).standalone === true;
     // iOS PWA uses touchmove lock to avoid position: fixed viewport bugs.
-    const isIOSPWA = isIOS && isStandalone
+    const isIOSPWA = isIOS && isStandalone;
 
     const unlockScroll = () => {
-      const storedTop = document.body.style.top
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.left = ''
-      document.body.style.right = ''
-      document.body.style.overflow = ''
-      document.documentElement.style.overflow = ''
+      const storedTop = document.body.style.top;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
 
       if (touchMoveHandlerRef.current) {
-        document.removeEventListener('touchmove', touchMoveHandlerRef.current)
-        touchMoveHandlerRef.current = null
+        document.removeEventListener("touchmove", touchMoveHandlerRef.current);
+        touchMoveHandlerRef.current = null;
       }
 
       if (isIOSPWA) {
         if (scrollLockYRef.current) {
-          window.scrollTo(0, scrollLockYRef.current)
+          window.scrollTo(0, scrollLockYRef.current);
         }
-        return
+        return;
       }
 
       if (storedTop) {
-        window.scrollTo(0, parseInt(storedTop, 10) * -1)
+        window.scrollTo(0, parseInt(storedTop, 10) * -1);
       }
-    }
+    };
 
     if (isOpen) {
-      scrollLockYRef.current = window.scrollY
+      scrollLockYRef.current = window.scrollY;
 
       if (isIOSPWA) {
-        document.documentElement.style.overflow = 'hidden'
-        document.body.style.overflow = 'hidden'
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
         const handler = (e: TouchEvent) => {
-          e.preventDefault()
-        }
-        touchMoveHandlerRef.current = handler
-        document.addEventListener('touchmove', handler, { passive: false })
+          e.preventDefault();
+        };
+        touchMoveHandlerRef.current = handler;
+        document.addEventListener("touchmove", handler, { passive: false });
       } else {
-        document.body.style.position = 'fixed'
-        document.body.style.top = `-${scrollLockYRef.current}px`
-        document.body.style.left = '0'
-        document.body.style.right = '0'
-        document.body.style.overflow = 'hidden'
+        document.body.style.position = "fixed";
+        document.body.style.top = `-${scrollLockYRef.current}px`;
+        document.body.style.left = "0";
+        document.body.style.right = "0";
+        document.body.style.overflow = "hidden";
       }
     } else {
-      unlockScroll()
+      unlockScroll();
     }
 
     return () => {
-      unlockScroll()
-    }
-  }, [isOpen])
+      unlockScroll();
+    };
+  }, [isOpen]);
 
   const handleCarouselPointerDown = useCallback((e: React.PointerEvent) => {
-    pointerDownPos.current = { x: e.clientX, y: e.clientY }
-  }, [])
+    pointerDownPos.current = { x: e.clientX, y: e.clientY };
+  }, []);
 
   const handleCarouselClick = useCallback(
     (e: React.MouseEvent) => {
       // Only close if pointer moved less than 5px (pure click, not drag)
       if (pointerDownPos.current) {
-        const dx = Math.abs(e.clientX - pointerDownPos.current.x)
-        const dy = Math.abs(e.clientY - pointerDownPos.current.y)
+        const dx = Math.abs(e.clientX - pointerDownPos.current.x);
+        const dy = Math.abs(e.clientY - pointerDownPos.current.y);
         if (dx < 5 && dy < 5) {
-          close()
+          close();
         }
       }
-      pointerDownPos.current = null
+      pointerDownPos.current = null;
     },
-    [close]
-  )
+    [close],
+  );
 
   const handleOverlayClick = useCallback(() => {
-    close()
-  }, [close])
+    close();
+  }, [close]);
 
   const handleToggleStarred = useCallback(() => {
     if (entry) {
-      const newStarred = !entry.starred
+      const newStarred = !entry.starred;
       markAsStarred(
         { id: entry.id, starred: newStarred },
         {
           onSuccess: () => {
-            updateEntryStarred(newStarred)
+            updateEntryStarred(newStarred);
           },
-        }
-      )
+        },
+      );
     }
-  }, [entry, markAsStarred, updateEntryStarred])
+  }, [entry, markAsStarred, updateEntryStarred]);
 
-  const publishedAt = entry?.publishedAt ? formatRelativeTime(entry.publishedAt, t) : null
+  const publishedAt = entry?.publishedAt
+    ? formatRelativeTime(entry.publishedAt, t)
+    : null;
 
   // Strip HTML for content preview
-  const contentPreview = entry?.content ? stripHtml(entry.content).slice(0, 200) : null
+  const contentPreview = entry?.content
+    ? stripHtml(entry.content).slice(0, 200)
+    : null;
 
   return (
     <AnimatePresence onExitComplete={reset}>
@@ -252,19 +274,24 @@ export function Lightbox() {
               <button
                 type="button"
                 className={cn(
-                  'flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20',
-                  entry?.starred && 'bg-amber-500/20 text-amber-500 hover:bg-amber-500/30'
+                  "flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20",
+                  entry?.starred &&
+                    "bg-amber-500/20 text-amber-500 hover:bg-amber-500/30",
                 )}
                 onClick={(e) => {
-                  e.stopPropagation()
-                  handleToggleStarred()
+                  e.stopPropagation();
+                  handleToggleStarred();
                 }}
-                title={entry?.starred ? t('entry.remove_from_starred') : t('entry.add_to_starred')}
+                title={
+                  entry?.starred
+                    ? t("entry.remove_from_starred")
+                    : t("entry.add_to_starred")
+                }
               >
                 <svg
                   className="size-5"
                   viewBox="0 0 24 24"
-                  fill={entry?.starred ? 'currentColor' : 'none'}
+                  fill={entry?.starred ? "currentColor" : "none"}
                   stroke="currentColor"
                   strokeWidth={2}
                 >
@@ -284,7 +311,12 @@ export function Lightbox() {
                   className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg
+                    className="size-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -300,7 +332,12 @@ export function Lightbox() {
                 className="flex size-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
                 onClick={close}
               >
-                <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg
+                  className="size-6"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -356,7 +393,11 @@ export function Lightbox() {
                           src={src}
                           alt=""
                           className="max-h-full max-w-full object-contain"
-                          loading={Math.abs(index - currentIndex) <= 1 ? 'eager' : 'lazy'}
+                          loading={
+                            Math.abs(index - currentIndex) <= 1
+                              ? "eager"
+                              : "lazy"
+                          }
                         />
                       </div>
                     ))}
@@ -370,16 +411,21 @@ export function Lightbox() {
                   <button
                     type="button"
                     className={cn(
-                      'absolute left-4 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors',
-                      currentIndex === 0 ? 'invisible' : 'hover:bg-white/20'
+                      "absolute left-4 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors",
+                      currentIndex === 0 ? "invisible" : "hover:bg-white/20",
                     )}
                     onClick={(e) => {
-                      e.stopPropagation()
-                      emblaApi?.scrollPrev()
+                      e.stopPropagation();
+                      emblaApi?.scrollPrev();
                     }}
                     disabled={currentIndex === 0}
                   >
-                    <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg
+                      className="size-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -391,16 +437,23 @@ export function Lightbox() {
                   <button
                     type="button"
                     className={cn(
-                      'absolute right-4 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors',
-                      currentIndex === images.length - 1 ? 'invisible' : 'hover:bg-white/20'
+                      "absolute right-4 top-1/2 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors",
+                      currentIndex === images.length - 1
+                        ? "invisible"
+                        : "hover:bg-white/20",
                     )}
                     onClick={(e) => {
-                      e.stopPropagation()
-                      emblaApi?.scrollNext()
+                      e.stopPropagation();
+                      emblaApi?.scrollNext();
                     }}
                     disabled={currentIndex === images.length - 1}
                   >
-                    <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg
+                      className="size-6"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -431,7 +484,7 @@ export function Lightbox() {
                   ) : (
                     <FeedIcon className="size-4 shrink-0" />
                   )}
-                  <span>{feed?.title || t('entry.unknown_feed')}</span>
+                  <span>{feed?.title || t("entry.unknown_feed")}</span>
                   {publishedAt && (
                     <>
                       <span>·</span>
@@ -450,12 +503,16 @@ export function Lightbox() {
 
                 {/* Title */}
                 {entry?.title && (
-                  <h2 className="mb-1 text-lg font-semibold text-white">{entry.title}</h2>
+                  <h2 className="mb-1 text-lg font-semibold text-white">
+                    {entry.title}
+                  </h2>
                 )}
 
                 {/* Content preview */}
                 {contentPreview && (
-                  <p className="line-clamp-2 text-sm text-white/70">{contentPreview}</p>
+                  <p className="line-clamp-2 text-sm text-white/70">
+                    {contentPreview}
+                  </p>
                 )}
               </div>
             </div>
@@ -463,5 +520,5 @@ export function Lightbox() {
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }
