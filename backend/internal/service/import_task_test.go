@@ -1,8 +1,8 @@
 package service_test
 
 import (
-	"gist/backend/internal/service"
 	"context"
+	"gist/backend/internal/service"
 	"testing"
 	"time"
 

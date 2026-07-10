@@ -1,7 +1,7 @@
-import { useCallback, useRef, type ReactNode } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
+import { useCallback, useRef, type ReactNode } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -10,23 +10,23 @@ import {
   ContextMenuSubContent,
   ContextMenuSubTrigger,
   ContextMenuTrigger,
-} from '@/components/ui/context-menu'
-import { ChevronIcon } from '@/components/ui/icons'
-import { useContextMenu } from '@/hooks/useContextMenu'
-import { useCategoryState } from '@/hooks/useCategoryState'
-import { feedItemStyles, sidebarItemIconStyles } from './styles'
-import type { ContentType } from '@/types/api'
+} from "@/components/ui/context-menu";
+import { ChevronIcon } from "@/components/ui/icons";
+import { useContextMenu } from "@/hooks/useContextMenu";
+import { useCategoryState } from "@/hooks/useCategoryState";
+import { feedItemStyles, sidebarItemIconStyles } from "./styles";
+import type { ContentType } from "@/types/api";
 
 interface FeedCategoryProps {
-  name: string
-  folderId: string
-  unreadCount?: number
-  children: ReactNode
-  defaultOpen?: boolean
-  isSelected?: boolean
-  onSelect?: () => void
-  onDelete?: (folderId: string) => void
-  onChangeType?: (folderId: string, type: ContentType) => void
+  name: string;
+  folderId: string;
+  unreadCount?: number;
+  children: ReactNode;
+  defaultOpen?: boolean;
+  isSelected?: boolean;
+  onSelect?: () => void;
+  onDelete?: (folderId: string) => void;
+  onChangeType?: (folderId: string, type: ContentType) => void;
 }
 
 export function FeedCategory({
@@ -40,29 +40,29 @@ export function FeedCategory({
   onDelete,
   onChangeType,
 }: FeedCategoryProps) {
-  const { t } = useTranslation()
-  const [open, , toggle] = useCategoryState(name, defaultOpen)
-  const triggerRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation();
+  const [open, , toggle] = useCategoryState(name, defaultOpen);
+  const triggerRef = useRef<HTMLDivElement>(null);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent | { pageX: number; pageY: number }) => {
       // Programmatically trigger the context menu for long press
-      if (!('button' in e) && triggerRef.current) {
+      if (!("button" in e) && triggerRef.current) {
         triggerRef.current.dispatchEvent(
-          new MouseEvent('contextmenu', {
+          new MouseEvent("contextmenu", {
             bubbles: true,
             clientX: e.pageX,
             clientY: e.pageY,
-          })
-        )
+          }),
+        );
       }
     },
-    []
-  )
+    [],
+  );
 
   const contextMenuProps = useContextMenu({
     onContextMenu: handleContextMenu,
-  })
+  });
 
   return (
     <div>
@@ -71,7 +71,7 @@ export function FeedCategory({
         <ContextMenuTrigger asChild ref={triggerRef}>
           <div
             data-active={isSelected}
-            className={cn(feedItemStyles, 'group relative py-0.5 pl-2.5 pr-2')}
+            className={cn(feedItemStyles, "group relative py-0.5 pl-2.5 pr-2")}
             onClick={onSelect}
             {...contextMenuProps}
           >
@@ -81,12 +81,17 @@ export function FeedCategory({
               className="flex h-full items-center"
               tabIndex={-1}
               onClick={(e) => {
-                e.stopPropagation()
-                toggle()
+                e.stopPropagation();
+                toggle();
               }}
             >
               <span className={sidebarItemIconStyles}>
-                <ChevronIcon className={cn('size-4 transition-transform duration-200', open && 'rotate-90')} />
+                <ChevronIcon
+                  className={cn(
+                    "size-4 transition-transform duration-200",
+                    open && "rotate-90",
+                  )}
+                />
               </span>
             </button>
             {/* Folder name - clicking selects the folder */}
@@ -101,16 +106,24 @@ export function FeedCategory({
         <ContextMenuContent>
           {onChangeType && (
             <ContextMenuSub>
-              <ContextMenuSubTrigger>{t('actions.change_type')}</ContextMenuSubTrigger>
+              <ContextMenuSubTrigger>
+                {t("actions.change_type")}
+              </ContextMenuSubTrigger>
               <ContextMenuSubContent>
-                <ContextMenuItem onClick={() => onChangeType(folderId, 'article')}>
-                  {t('content_type.article')}
+                <ContextMenuItem
+                  onClick={() => onChangeType(folderId, "article")}
+                >
+                  {t("content_type.article")}
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => onChangeType(folderId, 'picture')}>
-                  {t('content_type.picture')}
+                <ContextMenuItem
+                  onClick={() => onChangeType(folderId, "picture")}
+                >
+                  {t("content_type.picture")}
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => onChangeType(folderId, 'notification')}>
-                  {t('content_type.notification')}
+                <ContextMenuItem
+                  onClick={() => onChangeType(folderId, "notification")}
+                >
+                  {t("content_type.notification")}
                 </ContextMenuItem>
               </ContextMenuSubContent>
             </ContextMenuSub>
@@ -120,7 +133,7 @@ export function FeedCategory({
               className="text-destructive focus:text-destructive"
               onClick={() => onDelete(folderId)}
             >
-              {t('actions.delete')}
+              {t("actions.delete")}
             </ContextMenuItem>
           )}
         </ContextMenuContent>
@@ -131,9 +144,9 @@ export function FeedCategory({
         {open && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
             className="overflow-hidden"
           >
             <div className="space-y-px">{children}</div>
@@ -141,5 +154,5 @@ export function FeedCategory({
         )}
       </AnimatePresence>
     </div>
-  )
+  );
 }

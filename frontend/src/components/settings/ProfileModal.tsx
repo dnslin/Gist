@@ -1,37 +1,36 @@
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { ProfileSettings } from './tabs/ProfileSettings'
-import { cn } from '@/lib/utils'
+import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { ProfileSettings } from "./tabs/ProfileSettings";
+import { cn } from "@/lib/utils";
 
 interface ProfileModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const MOBILE_BREAKPOINT = 768
+const MOBILE_BREAKPOINT = 768;
 
 function useMobileDetect() {
   const [isMobile, setIsMobile] = useState(
-    typeof window !== 'undefined' ? window.innerWidth < MOBILE_BREAKPOINT : false
-  )
+    typeof window !== "undefined"
+      ? window.innerWidth < MOBILE_BREAKPOINT
+      : false,
+  );
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+    const handleResize = () =>
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
-  return isMobile
+  return isMobile;
 }
 
 export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
-  const { t } = useTranslation()
-  const isMobile = useMobileDetect()
+  const { t } = useTranslation();
+  const isMobile = useMobileDetect();
 
   // Mobile layout
   if (isMobile) {
@@ -41,18 +40,30 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           <div className="flex h-full min-h-0 flex-col bg-background safe-area-inset">
             {/* Header */}
             <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border shrink-0">
-              <DialogTitle className="text-lg font-bold">{t('profile.title')}</DialogTitle>
+              <DialogTitle className="text-lg font-bold">
+                {t("profile.title")}
+              </DialogTitle>
               <button
                 onClick={() => onOpenChange(false)}
                 className={cn(
-                  'rounded-md p-1.5 shrink-0',
-                  'text-muted-foreground hover:text-foreground hover:bg-accent',
-                  'transition-colors focus:outline-none'
+                  "rounded-md p-1.5 shrink-0",
+                  "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  "transition-colors focus:outline-none",
                 )}
-                aria-label={t('entry.close')}
+                aria-label={t("entry.close")}
               >
-                <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="size-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -64,7 +75,7 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
           </div>
         </DialogContent>
       </Dialog>
-    )
+    );
   }
 
   // Desktop layout
@@ -74,18 +85,30 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-            <DialogTitle className="text-xl font-bold">{t('profile.title')}</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              {t("profile.title")}
+            </DialogTitle>
             <button
               onClick={() => onOpenChange(false)}
               className={cn(
-                'rounded-md p-1.5',
-                'text-muted-foreground hover:text-foreground hover:bg-accent',
-                'transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                "rounded-md p-1.5",
+                "text-muted-foreground hover:text-foreground hover:bg-accent",
+                "transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               )}
-              aria-label={t('entry.close')}
+              aria-label={t("entry.close")}
             >
-              <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="size-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -97,5 +120,5 @@ export function ProfileModal({ open, onOpenChange }: ProfileModalProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

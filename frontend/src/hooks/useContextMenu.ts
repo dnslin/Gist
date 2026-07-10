@@ -1,10 +1,12 @@
-import { useLongPress } from './useLongPress'
+import { useLongPress } from "./useLongPress";
 
 interface UseContextMenuOptions {
-  onContextMenu: (e: React.MouseEvent | { pageX: number; pageY: number; target: EventTarget }) => void
-  onTouchStart?: (e: React.TouchEvent) => void
-  onTouchMove?: (e: React.TouchEvent) => void
-  onTouchEnd?: (e: React.TouchEvent) => void
+  onContextMenu: (
+    e: React.MouseEvent | { pageX: number; pageY: number; target: EventTarget },
+  ) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchMove?: (e: React.TouchEvent) => void;
+  onTouchEnd?: (e: React.TouchEvent) => void;
 }
 
 /**
@@ -22,10 +24,10 @@ export function useContextMenu({
     onTouchStart,
     onTouchMove,
     onTouchEnd,
-  })
+  });
 
   return {
     ...longPressProps,
     onContextMenu,
-  }
+  };
 }

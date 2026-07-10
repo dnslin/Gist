@@ -1,78 +1,78 @@
-import type { SelectionType } from '@/hooks/useSelection'
-import type { ContentType } from '@/types/api'
+import type { SelectionType } from "@/hooks/useSelection";
+import type { ContentType } from "@/types/api";
 
 export interface RouteState {
-  selection: SelectionType
-  entryId: string | null
-  unreadOnly: boolean
-  contentType: ContentType
+  selection: SelectionType;
+  entryId: string | null;
+  unreadOnly: boolean;
+  contentType: ContentType;
 }
 
 function parseContentType(value: string | null): ContentType {
-  if (value === 'picture' || value === 'notification') {
-    return value
+  if (value === "picture" || value === "notification") {
+    return value;
   }
-  return 'article'
+  return "article";
 }
 
 /**
  * Parse URL pathname and search params into route state
  */
 export function parseRoute(pathname: string, search: string): RouteState {
-  const params = new URLSearchParams(search)
-  const unreadOnly = params.get('unread') === 'true'
-  const contentType = parseContentType(params.get('type'))
+  const params = new URLSearchParams(search);
+  const unreadOnly = params.get("unread") === "true";
+  const contentType = parseContentType(params.get("type"));
 
   // Remove leading slash and split
-  const segments = pathname.replace(/^\//, '').split('/').filter(Boolean)
+  const segments = pathname.replace(/^\//, "").split("/").filter(Boolean);
 
   // Default: /all or /
-  if (segments.length === 0 || segments[0] === 'all') {
+  if (segments.length === 0 || segments[0] === "all") {
     return {
-      selection: { type: 'all' },
+      selection: { type: "all" },
       entryId: segments[1] || null,
       unreadOnly,
       contentType,
-    }
+    };
   }
 
   // /feed/:feedId/:entryId?
-  if (segments[0] === 'feed' && segments[1]) {
+  if (segments[0] === "feed" && segments[1]) {
     return {
-      selection: { type: 'feed', feedId: segments[1] },
+      selection: { type: "feed", feedId: segments[1] },
       entryId: segments[2] || null,
       unreadOnly,
       contentType,
-    }
+    };
   }
 
   // /folder/:folderId/:entryId?
-  if (segments[0] === 'folder' && segments[1]) {
+  if (segments[0] === "folder" && segments[1]) {
     return {
-      selection: { type: 'folder', folderId: segments[1] },
+      selection: { type: "folder", folderId: segments[1] },
       entryId: segments[2] || null,
       unreadOnly,
       contentType,
-    }
+    };
   }
 
   // /starred/:entryId?
-  if (segments[0] === 'starred') {
+  if (segments[0] === "starred") {
     return {
-      selection: { type: 'starred' },
+      selection: { type: "starred" },
       entryId: segments[1] || null,
       unreadOnly,
       contentType,
-    }
+    };
   }
 
   // Fallback to all
   return {
-    selection: { type: 'all' },
+    selection: { type: "all" },
     entryId: null,
     unreadOnly,
     contentType,
-  }
+  };
 }
 
 /**
@@ -82,43 +82,47 @@ export function buildPath(
   selection: SelectionType,
   entryId?: string | null,
   unreadOnly?: boolean,
-  contentType?: ContentType
+  contentType?: ContentType,
 ): string {
-  let path: string
+  let path: string;
 
   switch (selection.type) {
-    case 'all':
-      path = entryId ? `/all/${entryId}` : '/all'
-      break
-    case 'feed':
-      path = entryId ? `/feed/${selection.feedId}/${entryId}` : `/feed/${selection.feedId}`
-      break
-    case 'folder':
-      path = entryId ? `/folder/${selection.folderId}/${entryId}` : `/folder/${selection.folderId}`
-      break
-    case 'starred':
-      path = entryId ? `/starred/${entryId}` : '/starred'
-      break
+    case "all":
+      path = entryId ? `/all/${entryId}` : "/all";
+      break;
+    case "feed":
+      path = entryId
+        ? `/feed/${selection.feedId}/${entryId}`
+        : `/feed/${selection.feedId}`;
+      break;
+    case "folder":
+      path = entryId
+        ? `/folder/${selection.folderId}/${entryId}`
+        : `/folder/${selection.folderId}`;
+      break;
+    case "starred":
+      path = entryId ? `/starred/${entryId}` : "/starred";
+      break;
   }
 
-  const params = new URLSearchParams()
+  const params = new URLSearchParams();
   if (unreadOnly) {
-    params.set('unread', 'true')
+    params.set("unread", "true");
   }
   if (contentType) {
-    params.set('type', contentType)
+    params.set("type", contentType);
   }
-  const queryString = params.toString()
+  const queryString = params.toString();
   if (queryString) {
-    path += '?' + queryString
+    path += "?" + queryString;
   }
 
-  return path
+  return path;
 }
 
 /**
  * Check if current path is add-feed page
  */
 export function isAddFeedPath(pathname: string): boolean {
-  return pathname === '/add-feed'
+  return pathname === "/add-feed";
 }

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"gist/backend/internal/model"
-	"gist/backend/internal/service"
 	"gist/backend/internal/repository/mock"
+	"gist/backend/internal/service"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"

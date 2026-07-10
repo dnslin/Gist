@@ -1,8 +1,8 @@
 package repository_test
 
 import (
-	"gist/backend/internal/repository"
 	"context"
+	"gist/backend/internal/repository"
 	"testing"
 
 	"gist/backend/internal/repository/testutil"

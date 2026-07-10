@@ -1,23 +1,30 @@
-import { memo, useState, useCallback, useContext, createContext, useMemo } from 'react'
-import { cn } from '@/lib/utils'
-import { getProxiedImageUrl } from '@/lib/image-proxy'
-import { ImagePreviewContext } from './article-content'
+import {
+  memo,
+  useState,
+  useCallback,
+  useContext,
+  createContext,
+  useMemo,
+} from "react";
+import { cn } from "@/lib/utils";
+import { getProxiedImageUrl } from "@/lib/image-proxy";
+import { ImagePreviewContext } from "./article-content";
 
 // Context for passing article URL to resolve relative URLs and set Referer
 // eslint-disable-next-line react-refresh/only-export-components
-export const ArticleLinkContext = createContext<string | undefined>(undefined)
+export const ArticleLinkContext = createContext<string | undefined>(undefined);
 
 // Global cache to track loaded images - prevents flash when component remounts
-const loadedImagesCache = new Set<string>()
+const loadedImagesCache = new Set<string>();
 
 interface ArticleImageProps {
-  src?: string
-  alt?: string
-  width?: string | number
-  height?: string | number
-  srcset?: string
-  sizes?: string
-  className?: string
+  src?: string;
+  alt?: string;
+  width?: string | number;
+  height?: string | number;
+  srcset?: string;
+  sizes?: string;
+  className?: string;
 }
 
 /**
@@ -25,15 +32,15 @@ interface ArticleImageProps {
  */
 function proxySrcset(srcset: string, articleUrl?: string): string {
   return srcset
-    .split(',')
+    .split(",")
     .map((entry) => {
-      const parts = entry.trim().split(/\s+/)
+      const parts = entry.trim().split(/\s+/);
       if (parts.length >= 1 && parts[0]) {
-        parts[0] = getProxiedImageUrl(parts[0], articleUrl)
+        parts[0] = getProxiedImageUrl(parts[0], articleUrl);
       }
-      return parts.join(' ')
+      return parts.join(" ");
     })
-    .join(', ')
+    .join(", ");
 }
 
 /**
@@ -42,7 +49,7 @@ function proxySrcset(srcset: string, articleUrl?: string): string {
  */
 export const ArticleImage = memo(function ArticleImage({
   src,
-  alt = '',
+  alt = "",
   width,
   height,
   srcset,
@@ -50,51 +57,56 @@ export const ArticleImage = memo(function ArticleImage({
   className,
   ...props
 }: ArticleImageProps & React.ImgHTMLAttributes<HTMLImageElement>) {
-  const articleUrl = useContext(ArticleLinkContext)
-  const imagePreviewContext = useContext(ImagePreviewContext)
+  const articleUrl = useContext(ArticleLinkContext);
+  const imagePreviewContext = useContext(ImagePreviewContext);
 
   // Compute proxied URLs first so we can check the cache
   const proxiedSrc = useMemo(
-    () => (src ? getProxiedImageUrl(src, articleUrl) : ''),
-    [src, articleUrl]
-  )
+    () => (src ? getProxiedImageUrl(src, articleUrl) : ""),
+    [src, articleUrl],
+  );
   const proxiedSrcset = useMemo(
     () => (srcset ? proxySrcset(srcset, articleUrl) : undefined),
-    [srcset, articleUrl]
-  )
+    [srcset, articleUrl],
+  );
 
   // Initialize isLoaded based on cache - prevents flash on remount
-  const [isLoaded, setIsLoaded] = useState(() => loadedImagesCache.has(proxiedSrc))
-  const [isError, setIsError] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(() =>
+    loadedImagesCache.has(proxiedSrc),
+  );
+  const [isError, setIsError] = useState(false);
 
   const handleLoad = useCallback(() => {
-    loadedImagesCache.add(proxiedSrc)
-    setIsLoaded(true)
-  }, [proxiedSrc])
+    loadedImagesCache.add(proxiedSrc);
+    setIsLoaded(true);
+  }, [proxiedSrc]);
 
   const handleError = useCallback(() => {
-    setIsError(true)
-  }, [])
+    setIsError(true);
+  }, []);
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    if (src && imagePreviewContext) {
-      e.preventDefault()
-      e.stopPropagation()
-      imagePreviewContext.openPreview(src)
-    }
-  }, [src, imagePreviewContext])
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      if (src && imagePreviewContext) {
+        e.preventDefault();
+        e.stopPropagation();
+        imagePreviewContext.openPreview(src);
+      }
+    },
+    [src, imagePreviewContext],
+  );
 
-  if (!src) return null
+  if (!src) return null;
 
   if (isError) {
     return (
       <span
         className={cn(
-          'inline-flex items-center justify-center bg-muted/50 text-muted-foreground rounded',
-          className
+          "inline-flex items-center justify-center bg-muted/50 text-muted-foreground rounded",
+          className,
         )}
         style={{
-          width: width ? Number(width) : 'auto',
+          width: width ? Number(width) : "auto",
           height: height ? Number(height) : 80,
         }}
       >
@@ -112,11 +124,11 @@ export const ArticleImage = memo(function ArticleImage({
           />
         </svg>
       </span>
-    )
+    );
   }
 
   // Only show skeleton placeholder if we have dimensions
-  const showSkeleton = !isLoaded && width && height
+  const showSkeleton = !isLoaded && width && height;
 
   return (
     <img
@@ -132,13 +144,13 @@ export const ArticleImage = memo(function ArticleImage({
       onError={handleError}
       onClick={handleClick}
       className={cn(
-        'max-w-full h-auto rounded transition-opacity duration-200',
-        showSkeleton && 'bg-muted/30',
-        isLoaded ? 'opacity-100' : 'opacity-70',
-        imagePreviewContext && 'cursor-zoom-in',
-        className
+        "max-w-full h-auto rounded transition-opacity duration-200",
+        showSkeleton && "bg-muted/30",
+        isLoaded ? "opacity-100" : "opacity-70",
+        imagePreviewContext && "cursor-zoom-in",
+        className,
       )}
       {...props}
     />
-  )
-})
+  );
+});

@@ -1,6 +1,6 @@
-import type { ContentType } from './api'
+import type { ContentType } from "./api";
 
-export type AIProvider = 'openai' | 'anthropic' | 'compatible';
+export type AIProvider = "openai" | "anthropic" | "compatible";
 
 export type RequestOptions = Record<string, unknown>;
 
@@ -36,9 +36,9 @@ export interface GeneralSettings {
   markReadOnScroll: boolean;
 }
 
-export type ProxyType = 'http' | 'socks5';
+export type ProxyType = "http" | "socks5";
 
-export type IPStack = 'default' | 'ipv4' | 'ipv6';
+export type IPStack = "default" | "ipv4" | "ipv6";
 
 export interface NetworkSettings {
   enabled: boolean;

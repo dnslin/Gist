@@ -5,14 +5,14 @@ on:
     branches:
       - main
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-test.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-test.yml"
   pull_request:
     branches:
       - main
     paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-test.yml'
+      - "frontend/**"
+      - ".github/workflows/frontend-test.yml"
   workflow_dispatch:
 
 concurrency:

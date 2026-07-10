@@ -1,27 +1,27 @@
-import type { RefCallback } from 'react'
-import { useRef } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useCodeHighlight } from '@/hooks/useCodeHighlight'
-import { useEntryMeta } from '@/hooks/useEntryMeta'
-import { isSafeUrl } from '@/lib/url'
-import { ArticleContent } from '@/components/ui/article-content'
-import type { ArticleContentBlock } from '@/components/ui/article-content'
-import { UserIcon, CalendarIcon, ClockIcon } from '@/components/ui/icons'
-import { AiSummaryBox } from './AiSummaryBox'
-import { BackToTopButton } from './BackToTopButton'
-import type { Entry } from '@/types/api'
+import type { RefCallback } from "react";
+import { useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { useCodeHighlight } from "@/hooks/useCodeHighlight";
+import { useEntryMeta } from "@/hooks/useEntryMeta";
+import { isSafeUrl } from "@/lib/url";
+import { ArticleContent } from "@/components/ui/article-content";
+import type { ArticleContentBlock } from "@/components/ui/article-content";
+import { UserIcon, CalendarIcon, ClockIcon } from "@/components/ui/icons";
+import { AiSummaryBox } from "./AiSummaryBox";
+import { BackToTopButton } from "./BackToTopButton";
+import type { Entry } from "@/types/api";
 
 interface EntryContentBodyProps {
-  entry: Entry
-  displayTitle?: string | null
-  scrollRef: RefCallback<HTMLDivElement>
-  scrollNode?: HTMLDivElement | null
-  displayContent: string | null | undefined
-  displayBlocks?: ArticleContentBlock[] | null
-  highlightContent?: string
-  aiSummary?: string | null
-  isLoadingSummary?: boolean
-  summaryError?: string | null
+  entry: Entry;
+  displayTitle?: string | null;
+  scrollRef: RefCallback<HTMLDivElement>;
+  scrollNode?: HTMLDivElement | null;
+  displayContent: string | null | undefined;
+  displayBlocks?: ArticleContentBlock[] | null;
+  highlightContent?: string;
+  aiSummary?: string | null;
+  isLoadingSummary?: boolean;
+  summaryError?: string | null;
 }
 
 export function EntryContentBody({
@@ -36,16 +36,17 @@ export function EntryContentBody({
   isLoadingSummary,
   summaryError,
 }: EntryContentBodyProps) {
-  const { t } = useTranslation()
-  const { publishedLong, readingTime } = useEntryMeta(entry)
-  const title = displayTitle ?? entry.title ?? t('entry.untitled')
-  const contentRef = useRef<HTMLDivElement>(null)
+  const { t } = useTranslation();
+  const { publishedLong, readingTime } = useEntryMeta(entry);
+  const title = displayTitle ?? entry.title ?? t("entry.untitled");
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Apply code highlighting after content renders
-  useCodeHighlight(contentRef, highlightContent ?? displayContent ?? '')
+  useCodeHighlight(contentRef, highlightContent ?? displayContent ?? "");
 
-  const hasBlocks = !!displayBlocks && displayBlocks.length > 0
-  const hasContent = hasBlocks || (!!displayContent && displayContent.trim().length > 0)
+  const hasBlocks = !!displayBlocks && displayBlocks.length > 0;
+  const hasContent =
+    hasBlocks || (!!displayContent && displayContent.trim().length > 0);
 
   return (
     <div
@@ -106,18 +107,24 @@ export function EntryContentBody({
         >
           {hasContent ? (
             hasBlocks ? (
-              <ArticleContent blocks={displayBlocks ?? []} articleUrl={entry.url} />
+              <ArticleContent
+                blocks={displayBlocks ?? []}
+                articleUrl={entry.url}
+              />
             ) : (
-              <ArticleContent content={displayContent ?? ''} articleUrl={entry.url} />
+              <ArticleContent
+                content={displayContent ?? ""}
+                articleUrl={entry.url}
+              />
             )
           ) : (
             <div className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground">
-              {t('entry.no_content')}
+              {t("entry.no_content")}
             </div>
           )}
         </div>
       </article>
       {scrollNode && <BackToTopButton scrollNode={scrollNode} />}
     </div>
-  )
+  );
 }

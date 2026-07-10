@@ -1,33 +1,33 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listFeeds, deleteFeed, updateFeed, updateFeedType } from '@/api'
-import type { ContentType } from '@/types/api'
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { listFeeds, deleteFeed, updateFeed, updateFeedType } from "@/api";
+import type { ContentType } from "@/types/api";
 
 export function useFeeds() {
   return useQuery({
-    queryKey: ['feeds'],
+    queryKey: ["feeds"],
     queryFn: () => listFeeds(),
-  })
+  });
 }
 
 export function useDeleteFeed() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteFeed(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feeds'] })
-      queryClient.invalidateQueries({ queryKey: ['unreadCounts'] })
+      queryClient.invalidateQueries({ queryKey: ["feeds"] });
+      queryClient.invalidateQueries({ queryKey: ["unreadCounts"] });
     },
-  })
+  });
 }
 
 export function useUpdateFeed() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: {
-      id: string
-      title: string
-      folderId?: string
-      summaryPromptReminder?: string
+      id: string;
+      title: string;
+      folderId?: string;
+      summaryPromptReminder?: string;
     }) =>
       updateFeed(payload.id, {
         title: payload.title,
@@ -35,18 +35,18 @@ export function useUpdateFeed() {
         summaryPromptReminder: payload.summaryPromptReminder,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feeds'] })
+      queryClient.invalidateQueries({ queryKey: ["feeds"] });
     },
-  })
+  });
 }
 
 export function useUpdateFeedType() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: { id: string; type: ContentType }) =>
       updateFeedType(payload.id, payload.type),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['feeds'] })
+      queryClient.invalidateQueries({ queryKey: ["feeds"] });
     },
-  })
+  });
 }

@@ -1,60 +1,60 @@
-import { useTranslation } from 'react-i18next'
-import { isSafeUrl } from '@/lib/url'
-import { cn } from '@/lib/utils'
-import { BackIcon } from '@/components/ui/icons'
-import { dispatchScrollToTop } from '@/hooks/useScrollToTop'
-import type { Entry } from '@/types/api'
+import { useTranslation } from "react-i18next";
+import { isSafeUrl } from "@/lib/url";
+import { cn } from "@/lib/utils";
+import { BackIcon } from "@/components/ui/icons";
+import { dispatchScrollToTop } from "@/hooks/useScrollToTop";
+import type { Entry } from "@/types/api";
 
 interface EntryContentHeaderProps {
-  entry: Entry
-  displayTitle?: string | null
-  isAtTop: boolean
-  isReadableActive: boolean
-  isLoading: boolean
-  error: string | null
-  onToggleReadable: () => void
-  onToggleStarred: () => void
-  isLoadingSummary?: boolean
-  hasSummary?: boolean
-  onToggleSummary?: () => void
-  isTranslating?: boolean
-  hasTranslation?: boolean
-  translationDisabled?: boolean
-  onToggleTranslation?: () => void
-  isMobile?: boolean
-  onBack?: () => void
+  entry: Entry;
+  displayTitle?: string | null;
+  isAtTop: boolean;
+  isReadableActive: boolean;
+  isLoading: boolean;
+  error: string | null;
+  onToggleReadable: () => void;
+  onToggleStarred: () => void;
+  isLoadingSummary?: boolean;
+  hasSummary?: boolean;
+  onToggleSummary?: () => void;
+  isTranslating?: boolean;
+  hasTranslation?: boolean;
+  translationDisabled?: boolean;
+  onToggleTranslation?: () => void;
+  isMobile?: boolean;
+  onBack?: () => void;
 }
 
 interface TranslationButtonState {
-  isDisabled: boolean
-  isTranslating: boolean
-  hasTranslation: boolean
+  isDisabled: boolean;
+  isTranslating: boolean;
+  hasTranslation: boolean;
 }
 
 function getTranslationButtonTitle(
   state: TranslationButtonState,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): string {
   if (state.isDisabled && !state.hasTranslation && !state.isTranslating) {
-    return t('entry.already_target_language')
+    return t("entry.already_target_language");
   }
   if (state.isTranslating) {
-    return t('entry.cancel_translation')
+    return t("entry.cancel_translation");
   }
   if (state.hasTranslation) {
-    return t('entry.show_original')
+    return t("entry.show_original");
   }
-  return t('entry.translate_article')
+  return t("entry.translate_article");
 }
 
 function getTranslationButtonClassName(state: TranslationButtonState): string {
   if (state.isDisabled && !state.hasTranslation && !state.isTranslating) {
-    return 'text-muted-foreground/50 cursor-not-allowed'
+    return "text-muted-foreground/50 cursor-not-allowed";
   }
   if (state.hasTranslation && !state.isTranslating) {
-    return 'bg-muted text-foreground'
+    return "bg-muted text-foreground";
   }
-  return 'text-muted-foreground hover:bg-accent hover:text-foreground'
+  return "text-muted-foreground hover:bg-accent hover:text-foreground";
 }
 
 export function EntryContentHeader({
@@ -76,17 +76,17 @@ export function EntryContentHeader({
   isMobile,
   onBack,
 }: EntryContentHeaderProps) {
-  const { t } = useTranslation()
-  const safeUrl = entry.url && isSafeUrl(entry.url) ? entry.url : null
-  const title = displayTitle ?? entry.title ?? t('entry.untitled')
+  const { t } = useTranslation();
+  const safeUrl = entry.url && isSafeUrl(entry.url) ? entry.url : null;
+  const title = displayTitle ?? entry.title ?? t("entry.untitled");
 
   return (
     <div className="absolute inset-x-0 top-0 z-20">
       {/* Background and Border Layer */}
       <div
         className={cn(
-          'absolute inset-0 transition-opacity duration-300 ease-in-out pointer-events-none border-b border-border bg-background/95 backdrop-blur',
-          isAtTop ? 'opacity-0' : 'opacity-100'
+          "absolute inset-0 transition-opacity duration-300 ease-in-out pointer-events-none border-b border-border bg-background/95 backdrop-blur",
+          isAtTop ? "opacity-0" : "opacity-100",
         )}
       />
 
@@ -104,12 +104,14 @@ export function EntryContentHeader({
           )}
           <div
             className={cn(
-              'truncate text-lg font-bold text-foreground transition-all duration-300 ease-in-out',
+              "truncate text-lg font-bold text-foreground transition-all duration-300 ease-in-out",
               isAtTop
-                ? 'translate-y-4 opacity-0 pointer-events-none'
-                : 'translate-y-0 opacity-100 cursor-pointer active:opacity-70'
+                ? "translate-y-4 opacity-0 pointer-events-none"
+                : "translate-y-0 opacity-100 cursor-pointer active:opacity-70",
             )}
-            onClick={isAtTop ? undefined : () => dispatchScrollToTop('entrycontent')}
+            onClick={
+              isAtTop ? undefined : () => dispatchScrollToTop("entrycontent")
+            }
           >
             {title}
           </div>
@@ -119,18 +121,22 @@ export function EntryContentHeader({
           <button
             type="button"
             onClick={onToggleStarred}
-            title={entry.starred ? t('entry.remove_from_starred') : t('entry.add_to_starred')}
-            className={cn(
-              'no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors',
+            title={
               entry.starred
-                ? 'text-amber-500 hover:bg-amber-500/10'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                ? t("entry.remove_from_starred")
+                : t("entry.add_to_starred")
+            }
+            className={cn(
+              "no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors",
+              entry.starred
+                ? "text-amber-500 hover:bg-amber-500/10"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
             )}
           >
             <svg
               className="size-5"
               viewBox="0 0 24 24"
-              fill={entry.starred ? 'currentColor' : 'none'}
+              fill={entry.starred ? "currentColor" : "none"}
               stroke="currentColor"
               strokeWidth={2}
             >
@@ -148,19 +154,21 @@ export function EntryContentHeader({
               onClick={onToggleSummary}
               title={
                 isLoadingSummary
-                  ? t('entry.cancel_summary')
+                  ? t("entry.cancel_summary")
                   : hasSummary
-                    ? t('entry.hide_summary')
-                    : t('entry.generate_summary')
+                    ? t("entry.hide_summary")
+                    : t("entry.generate_summary")
               }
               className={cn(
-                'no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors',
+                "no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors",
                 hasSummary
-                  ? 'bg-muted text-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
-              <span className={cn(isLoadingSummary && 'ai-icon-thinking-wrapper')}>
+              <span
+                className={cn(isLoadingSummary && "ai-icon-thinking-wrapper")}
+              >
                 <svg
                   className="size-5"
                   fill="none"
@@ -182,21 +190,27 @@ export function EntryContentHeader({
             <button
               type="button"
               onClick={onToggleTranslation}
-              disabled={translationDisabled && !hasTranslation && !isTranslating}
+              disabled={
+                translationDisabled && !hasTranslation && !isTranslating
+              }
               title={getTranslationButtonTitle(
-                { isDisabled: !!translationDisabled, isTranslating: !!isTranslating, hasTranslation: !!hasTranslation },
-                t
+                {
+                  isDisabled: !!translationDisabled,
+                  isTranslating: !!isTranslating,
+                  hasTranslation: !!hasTranslation,
+                },
+                t,
               )}
               className={cn(
-                'no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors',
+                "no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors",
                 getTranslationButtonClassName({
                   isDisabled: !!translationDisabled,
                   isTranslating: !!isTranslating,
                   hasTranslation: !!hasTranslation,
-                })
+                }),
               )}
             >
-              <span className={cn(isTranslating && 'ai-icon-thinking-wrapper')}>
+              <span className={cn(isTranslating && "ai-icon-thinking-wrapper")}>
                 <svg
                   className="size-5"
                   fill="none"
@@ -219,18 +233,23 @@ export function EntryContentHeader({
               type="button"
               onClick={onToggleReadable}
               disabled={isLoading}
-              title={error || (isReadableActive ? t('entry.show_original') : t('entry.show_readable'))}
+              title={
+                error ||
+                (isReadableActive
+                  ? t("entry.show_original")
+                  : t("entry.show_readable"))
+              }
               className={cn(
-                'no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+                "no-drag-region flex size-9 items-center justify-center rounded-lg transition-colors disabled:cursor-not-allowed disabled:opacity-50",
                 error
-                  ? 'text-destructive hover:bg-destructive/10'
+                  ? "text-destructive hover:bg-destructive/10"
                   : isReadableActive
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
               )}
             >
               <svg
-                className={cn('size-5', isLoading && 'animate-spin')}
+                className={cn("size-5", isLoading && "animate-spin")}
                 fill="none"
                 stroke="currentColor"
                 strokeWidth={2}
@@ -259,7 +278,7 @@ export function EntryContentHeader({
               target="_blank"
               rel="noopener noreferrer"
               className="no-drag-region flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label={t('entry.open_original')}
+              aria-label={t("entry.open_original")}
             >
               <svg
                 className="size-5"
@@ -279,5 +298,5 @@ export function EntryContentHeader({
         </div>
       </div>
     </div>
-  )
+  );
 }

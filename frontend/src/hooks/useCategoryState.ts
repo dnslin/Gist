@@ -1,92 +1,101 @@
-import { useCallback, useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from "react";
 
 interface CategoryState {
-  [categoryName: string]: boolean
+  [categoryName: string]: boolean;
 }
 
-const STORAGE_KEY = 'gist-category-state'
+const STORAGE_KEY = "gist-category-state";
 
 function getStoredState(): CategoryState {
-  if (typeof window === 'undefined') return {}
+  if (typeof window === "undefined") return {};
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return JSON.parse(stored)
+      return JSON.parse(stored);
     }
   } catch {
     // ignore parse errors
   }
-  return {}
+  return {};
 }
 
-let cachedState: CategoryState = getStoredState()
-const listeners = new Set<() => void>()
+let cachedState: CategoryState = getStoredState();
+const listeners = new Set<() => void>();
 
 function emitChange() {
   for (const listener of listeners) {
-    listener()
+    listener();
   }
 }
 
 function subscribe(callback: () => void): () => void {
-  listeners.add(callback)
-  return () => listeners.delete(callback)
+  listeners.add(callback);
+  return () => listeners.delete(callback);
 }
 
 function getSnapshot(): CategoryState {
-  return cachedState
+  return cachedState;
 }
 
 function setCategoryState(category: string, isOpen: boolean): void {
-  cachedState = { ...cachedState, [category]: isOpen }
+  cachedState = { ...cachedState, [category]: isOpen };
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedState))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedState));
   } catch {
     // ignore storage errors
   }
-  emitChange()
+  emitChange();
 }
 
 function toggleCategoryState(category: string): void {
-  const currentState = cachedState[category] ?? false
-  setCategoryState(category, !currentState)
+  const currentState = cachedState[category] ?? false;
+  setCategoryState(category, !currentState);
 }
 
 export function useCategoryState(
   category: string,
-  defaultOpen = false
+  defaultOpen = false,
 ): [boolean, (isOpen: boolean) => void, () => void] {
-  const state = useSyncExternalStore(subscribe, getSnapshot, getStoredState)
-  const isOpen = state[category] ?? defaultOpen
+  const state = useSyncExternalStore(subscribe, getSnapshot, getStoredState);
+  const isOpen = state[category] ?? defaultOpen;
 
   const setOpen = useCallback(
     (open: boolean) => {
-      setCategoryState(category, open)
+      setCategoryState(category, open);
     },
-    [category]
-  )
+    [category],
+  );
 
   const toggle = useCallback(() => {
-    toggleCategoryState(category)
-  }, [category])
+    toggleCategoryState(category);
+  }, [category]);
 
-  return [isOpen, setOpen, toggle]
+  return [isOpen, setOpen, toggle];
 }
 
 export function useCategoryActions() {
-  const setAllCategories = useCallback((categories: string[], isOpen: boolean) => {
-    for (const category of categories) {
-      setCategoryState(category, isOpen)
-    }
-  }, [])
+  const setAllCategories = useCallback(
+    (categories: string[], isOpen: boolean) => {
+      for (const category of categories) {
+        setCategoryState(category, isOpen);
+      }
+    },
+    [],
+  );
 
-  const expandAll = useCallback((categories: string[]) => {
-    setAllCategories(categories, true)
-  }, [setAllCategories])
+  const expandAll = useCallback(
+    (categories: string[]) => {
+      setAllCategories(categories, true);
+    },
+    [setAllCategories],
+  );
 
-  const collapseAll = useCallback((categories: string[]) => {
-    setAllCategories(categories, false)
-  }, [setAllCategories])
+  const collapseAll = useCallback(
+    (categories: string[]) => {
+      setAllCategories(categories, false);
+    },
+    [setAllCategories],
+  );
 
-  return { expandAll, collapseAll, setAllCategories }
+  return { expandAll, collapseAll, setAllCategories };
 }

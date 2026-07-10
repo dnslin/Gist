@@ -4,6 +4,6 @@
  * e.g., ext_tw_video_thumb, amplify_video_thumb
  */
 export function isVideoThumbnail(url?: string): boolean {
-  if (!url) return false
-  return url.includes('video_thumb')
+  if (!url) return false;
+  return url.includes("video_thumb");
 }

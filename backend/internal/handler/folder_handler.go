@@ -7,9 +7,9 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"gist/backend/pkg/logger"
 	"gist/backend/internal/model"
 	"gist/backend/internal/service"
+	"gist/backend/pkg/logger"
 )
 
 type FolderHandler struct {

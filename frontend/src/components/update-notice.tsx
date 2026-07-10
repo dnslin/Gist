@@ -1,71 +1,76 @@
-import { useRegisterSW } from 'virtual:pwa-register/react'
-import { useTranslation } from 'react-i18next'
-import { Download } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useRegisterSW } from "virtual:pwa-register/react";
+import { useTranslation } from "react-i18next";
+import { Download } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000 // 1 hour
+const UPDATE_CHECK_INTERVAL = 60 * 60 * 1000; // 1 hour
 
-function registerPeriodicSync(period: number, swUrl: string, r: ServiceWorkerRegistration) {
-  if (period <= 0) return
+function registerPeriodicSync(
+  period: number,
+  swUrl: string,
+  r: ServiceWorkerRegistration,
+) {
+  if (period <= 0) return;
 
   setInterval(async () => {
-    if ('onLine' in navigator && !navigator.onLine) return
+    if ("onLine" in navigator && !navigator.onLine) return;
 
     const resp = await fetch(swUrl, {
-      cache: 'no-store',
+      cache: "no-store",
       headers: {
-        cache: 'no-store',
-        'cache-control': 'no-cache',
+        cache: "no-store",
+        "cache-control": "no-cache",
       },
-    })
+    });
 
-    if (resp?.status === 200) await r.update()
-  }, period)
+    if (resp?.status === 200) await r.update();
+  }, period);
 }
 
 export function UpdateNotice() {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
 
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(swUrl, r) {
-      if (UPDATE_CHECK_INTERVAL <= 0) return
-      if (r?.active?.state === 'activated') {
-        registerPeriodicSync(UPDATE_CHECK_INTERVAL, swUrl, r)
+      if (UPDATE_CHECK_INTERVAL <= 0) return;
+      if (r?.active?.state === "activated") {
+        registerPeriodicSync(UPDATE_CHECK_INTERVAL, swUrl, r);
       } else if (r?.installing) {
-        r.installing.addEventListener('statechange', (e) => {
-          const sw = e.target as ServiceWorker
-          if (sw.state === 'activated') registerPeriodicSync(UPDATE_CHECK_INTERVAL, swUrl, r)
-        })
+        r.installing.addEventListener("statechange", (e) => {
+          const sw = e.target as ServiceWorker;
+          if (sw.state === "activated")
+            registerPeriodicSync(UPDATE_CHECK_INTERVAL, swUrl, r);
+        });
       }
     },
-  })
+  });
 
   const handleClick = () => {
-    updateServiceWorker(true)
-  }
+    updateServiceWorker(true);
+  };
 
-  if (!needRefresh) return null
+  if (!needRefresh) return null;
 
   return (
     <div
       className={cn(
-        'fixed right-6 bottom-6 z-50 cursor-pointer',
-        'mb-[env(safe-area-inset-bottom,0px)]'
+        "fixed right-6 bottom-6 z-50 cursor-pointer",
+        "mb-[env(safe-area-inset-bottom,0px)]",
       )}
       onClick={handleClick}
     >
       <div
         className={cn(
-          'flex items-center gap-3 rounded-xl px-4 py-2.5',
-          'bg-background/95 backdrop-blur-sm',
-          'border border-primary/20',
-          'shadow-lg shadow-primary/10',
-          'transition-all duration-200',
-          'hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/15',
-          'active:scale-[0.98]'
+          "flex items-center gap-3 rounded-xl px-4 py-2.5",
+          "bg-background/95 backdrop-blur-sm",
+          "border border-primary/20",
+          "shadow-lg shadow-primary/10",
+          "transition-all duration-200",
+          "hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/15",
+          "active:scale-[0.98]",
         )}
       >
         <div className="flex size-8 shrink-0 items-center justify-center">
@@ -73,13 +78,13 @@ export function UpdateNotice() {
         </div>
         <div className="min-w-0 text-left">
           <div className="text-sm font-medium text-foreground">
-            {t('update.available')}
+            {t("update.available")}
           </div>
           <div className="text-xs text-muted-foreground">
-            {t('update.description')}
+            {t("update.description")}
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
