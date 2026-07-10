@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"Review backend changes against the project layer guidance and linked quality checks."}
+{"file":".trellis/spec/frontend/index.md","reason":"Review frontend changes against the project layer guidance and linked quality checks."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/current-project-baseline.md","reason":"Check that Web, Docker, API, database, scheduler, streaming, and existing test baselines remain intact."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/wails3-technical-assessment.md","reason":"Check Wails pinning, no-listener architecture, streaming workaround, platform constraints, and NSIS updater boundaries."}

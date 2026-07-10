@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"Backend layer entry point for Go, database, error, logging, and quality guidance."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend layer entry point for React, hooks, state, type-safety, and quality guidance."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/current-project-baseline.md","reason":"Existing product, architecture, streaming contracts, test baseline, and compatibility surfaces that implementation must preserve."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/wails3-technical-assessment.md","reason":"Pinned Wails versions, official API evidence, AssetServer Flusher limitation, updater boundary, and selected integration direction."}
