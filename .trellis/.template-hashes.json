@@ -43,7 +43,7 @@
     ".trellis/scripts/__init__.py": "1242be5b972094c2e141aecbe81a4efd478f6534e3d5e28306374e6a18fcf46c",
     ".trellis/workflow.md": "8b226f7ff8e0388a85978c4cc0f7277f49cd06a3ef1275490a4c555430ddec3d",
     ".trellis/.gitignore": "3bc42434cbe61c937a1c26ea3c880b496bfad4e7d683750169e27ade509aa798",
-    "AGENTS.md": "0e9b7b01317db36ed6f01ed786d395f224c27462db520e9ac7425bc0af0f9443",
+    "AGENTS.md": "ff10fcb349385115f494b059b985b3b37ab2006ebdd1dc6eb3df13106d66c217",
     ".pi/prompts/trellis-start.md": "d2261d97173c77612144dd034cd5ed19b72a6b10fdaab647edabb4cfaa8c15a0",
     ".pi/prompts/trellis-continue.md": "941670a62ece2ad13a628df5fa4cf664a6d66a70d9811daaada20ec5c9851cfe",
     ".pi/prompts/trellis-finish-work.md": "16006238f2b8410a87fd8b857b4ed3f9f529b28cd85fe97cfeabe79f95406e41",
