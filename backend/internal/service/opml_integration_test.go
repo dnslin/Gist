@@ -14,15 +14,9 @@ import (
 	"gist/backend/internal/repository"
 	"gist/backend/internal/service"
 	"gist/backend/pkg/network"
-	"gist/backend/pkg/snowflake"
 
 	"github.com/stretchr/testify/require"
 )
-
-func init() {
-	// Initialize snowflake for integration tests
-	_ = snowflake.Init(1)
-}
 
 // Sample OPML content with a subset of feeds for testing
 const testOPML = `<?xml version="1.0" encoding="UTF-8"?>
@@ -63,9 +57,9 @@ func TestOPMLService_Integration_ImportAndExport(t *testing.T) {
 	dbConn := setupOPMLTestDB(t)
 	clientFactory := network.NewClientFactoryForTest(nil)
 
-	feedRepo := repository.NewFeedRepository(dbConn)
-	folderRepo := repository.NewFolderRepository(dbConn)
-	entryRepo := repository.NewEntryRepository(dbConn)
+	feedRepo := repository.NewFeedRepository(dbConn, newIntegrationGenerator(t))
+	folderRepo := repository.NewFolderRepository(dbConn, newIntegrationGenerator(t))
+	entryRepo := repository.NewEntryRepository(dbConn, newIntegrationGenerator(t))
 
 	feedSvc := service.NewFeedService(feedRepo, folderRepo, entryRepo, nil, nil, clientFactory, nil)
 	folderSvc := service.NewFolderService(folderRepo, feedRepo)
@@ -77,7 +71,7 @@ func TestOPMLService_Integration_ImportAndExport(t *testing.T) {
 
 	// Import OPML with progress callback
 	var progressCount int
-	result, err := opmlSvc.Import(ctx, strings.NewReader(testOPML), func(p service.ImportProgress) {
+	result, _, err := opmlSvc.Import(ctx, strings.NewReader(testOPML), func(p service.ImportProgress) {
 		progressCount++
 		t.Logf("Progress: %d/%d - %s (%s)", p.Current, p.Total, p.Feed, p.Status)
 	})
@@ -132,9 +126,9 @@ func TestOPMLService_Integration_ImportFromFile(t *testing.T) {
 	dbConn := setupOPMLTestDB(t)
 	clientFactory := network.NewClientFactoryForTest(nil)
 
-	feedRepo := repository.NewFeedRepository(dbConn)
-	folderRepo := repository.NewFolderRepository(dbConn)
-	entryRepo := repository.NewEntryRepository(dbConn)
+	feedRepo := repository.NewFeedRepository(dbConn, newIntegrationGenerator(t))
+	folderRepo := repository.NewFolderRepository(dbConn, newIntegrationGenerator(t))
+	entryRepo := repository.NewEntryRepository(dbConn, newIntegrationGenerator(t))
 
 	feedSvc := service.NewFeedService(feedRepo, folderRepo, entryRepo, nil, nil, clientFactory, nil)
 	folderSvc := service.NewFolderService(folderRepo, feedRepo)
@@ -149,7 +143,7 @@ func TestOPMLService_Integration_ImportFromFile(t *testing.T) {
 	defer file.Close()
 
 	// Import with nil progress callback for simplicity
-	result, err := opmlSvc.Import(ctx, file, nil)
+	result, _, err := opmlSvc.Import(ctx, file, nil)
 	require.NoError(t, err)
 
 	t.Logf("Import result: folders=%d created/%d skipped, feeds=%d created/%d skipped",

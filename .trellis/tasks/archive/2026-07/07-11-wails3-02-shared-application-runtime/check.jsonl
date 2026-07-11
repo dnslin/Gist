@@ -1,0 +1,7 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Quality review gates for race safety, constructor injection, global state, graceful shutdown, tests and lint."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Verify SQLite migration/schema/path and repository persistence contracts remain unchanged."}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Verify admission and lifecycle errors are explicit while existing HTTP error contracts remain stable."}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/prd.md","reason":"Check Child 02 evidence against parent REQ/AC IDs and non-goals."}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/design.md","reason":"Check Runtime ownership, writer quiet point and platform-neutral dependency direction."}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/implement.md","reason":"Check required evidence, rollback drill and archive gate completeness."}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-01-windows-baseline-version/evidence/E-C01-WEB-SERVER-DOCKER-REGRESSION.md","reason":"Compare Child 02 server/Web/PWA/Docker results with the archived predecessor baseline."}

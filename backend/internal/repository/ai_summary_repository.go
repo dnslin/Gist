@@ -18,11 +18,12 @@ type AISummaryRepository interface {
 }
 
 type aiSummaryRepository struct {
-	db dbtx
+	db        dbtx
+	generator snowflake.Generator
 }
 
-func NewAISummaryRepository(db dbtx) AISummaryRepository {
-	return &aiSummaryRepository{db: db}
+func NewAISummaryRepository(db dbtx, generator snowflake.Generator) AISummaryRepository {
+	return &aiSummaryRepository{db: db, generator: generator}
 }
 
 func (r *aiSummaryRepository) Get(ctx context.Context, entryID int64, isReadability bool, language string) (*model.AISummary, error) {
@@ -57,7 +58,7 @@ func (r *aiSummaryRepository) Get(ctx context.Context, entryID int64, isReadabil
 }
 
 func (r *aiSummaryRepository) Save(ctx context.Context, entryID int64, isReadability bool, language, summary string) error {
-	id := snowflake.NextID()
+	id := r.generator.NextID()
 	now := formatTime(time.Now())
 
 	isReadabilityInt := 0

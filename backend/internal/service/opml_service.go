@@ -17,7 +17,8 @@ import (
 )
 
 type OPMLService interface {
-	Import(ctx context.Context, reader io.Reader, onProgress func(ImportProgress)) (ImportResult, error)
+	Import(ctx context.Context, reader io.Reader, onProgress func(ImportProgress)) (ImportResult, ImportFollowUp, error)
+	RunImportFollowUp(ctx context.Context, followUp ImportFollowUp)
 	Export(ctx context.Context) ([]byte, error)
 }
 
@@ -26,6 +27,10 @@ type ImportResult struct {
 	FoldersSkipped int `json:"foldersSkipped"`
 	FeedsCreated   int `json:"feedsCreated"`
 	FeedsSkipped   int `json:"feedsSkipped"`
+}
+
+type ImportFollowUp struct {
+	FeedIDs []int64
 }
 
 type ImportProgress struct {
@@ -62,10 +67,10 @@ func NewOPMLService(
 	}
 }
 
-func (s *opmlService) Import(ctx context.Context, reader io.Reader, onProgress func(ImportProgress)) (ImportResult, error) {
+func (s *opmlService) Import(ctx context.Context, reader io.Reader, onProgress func(ImportProgress)) (ImportResult, ImportFollowUp, error) {
 	doc, err := opml.Parse(reader)
 	if err != nil {
-		return ImportResult{}, ErrInvalid
+		return ImportResult{}, ImportFollowUp{}, ErrInvalid
 	}
 
 	// Count total feeds
@@ -84,26 +89,31 @@ func (s *opmlService) Import(ctx context.Context, reader io.Reader, onProgress f
 	for _, outline := range doc.Body.Outlines {
 		if err := s.importOutline(ctx, outline, nil, "article", &result, &current, total, onProgress, &newFeedIDs); err != nil {
 			logger.Error("opml import failed", "module", "service", "action", "import", "resource", "opml", "result", "failed", "error", err)
-			return result, err
+			return result, ImportFollowUp{}, err
 		}
 
 	}
 
-	// Concurrently refresh newly created feeds and backfill icons
-	if len(newFeedIDs) > 0 {
-		go func() {
-			bgCtx := context.Background()
-			if s.refreshService != nil {
-				_ = s.refreshService.RefreshFeeds(bgCtx, newFeedIDs)
-			}
-			if s.iconService != nil {
-				_ = s.iconService.BackfillIcons(bgCtx)
-			}
-		}()
-	}
-
 	logger.Info("opml import completed", "module", "service", "action", "import", "resource", "opml", "result", "ok", "folders_created", result.FoldersCreated, "folders_skipped", result.FoldersSkipped, "feeds_created", result.FeedsCreated, "feeds_skipped", result.FeedsSkipped)
-	return result, nil
+	return result, ImportFollowUp{FeedIDs: newFeedIDs}, nil
+}
+
+func (s *opmlService) RunImportFollowUp(ctx context.Context, followUp ImportFollowUp) {
+	if len(followUp.FeedIDs) == 0 {
+		return
+	}
+	if s.refreshService != nil {
+		if err := s.refreshService.RefreshFeeds(ctx, followUp.FeedIDs); err != nil {
+			logger.Warn("opml import refresh failed", "module", "service", "action", "refresh", "resource", "feed", "result", "failed", "count", len(followUp.FeedIDs), "error", err)
+		}
+	}
+	if s.iconService != nil && ctx.Err() == nil {
+		if err := s.iconService.BackfillIcons(ctx); err != nil {
+			logger.Warn("opml import icon backfill failed", "module", "service", "action", "backfill", "resource", "icon", "result", "failed", "count", len(followUp.FeedIDs), "error", err)
+		} else {
+			logger.Info("opml import icon backfill completed", "module", "service", "action", "backfill", "resource", "icon", "result", "ok", "count", len(followUp.FeedIDs))
+		}
+	}
 }
 
 func countFeeds(outlines []opml.Outline) int {

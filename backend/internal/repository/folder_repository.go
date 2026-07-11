@@ -23,15 +23,16 @@ type FolderRepository interface {
 }
 
 type folderRepository struct {
-	db dbtx
+	db        dbtx
+	generator snowflake.Generator
 }
 
-func NewFolderRepository(db dbtx) FolderRepository {
-	return &folderRepository{db: db}
+func NewFolderRepository(db dbtx, generator snowflake.Generator) FolderRepository {
+	return &folderRepository{db: db, generator: generator}
 }
 
 func (r *folderRepository) Create(ctx context.Context, name string, parentID *int64, folderType string) (model.Folder, error) {
-	id := snowflake.NextID()
+	id := r.generator.NextID()
 	now := time.Now().UTC()
 	if folderType == "" {
 		folderType = "article"

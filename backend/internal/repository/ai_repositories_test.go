@@ -13,7 +13,7 @@ import (
 
 func TestAISummaryRepository(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewAISummaryRepository(db)
+	repo := repository.NewAISummaryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -47,7 +47,7 @@ func TestAISummaryRepository(t *testing.T) {
 
 func TestAITranslationRepository(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewAITranslationRepository(db)
+	repo := repository.NewAITranslationRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -77,7 +77,7 @@ func TestAITranslationRepository(t *testing.T) {
 
 func TestAIListTranslationRepository(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewAIListTranslationRepository(db)
+	repo := repository.NewAIListTranslationRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -101,7 +101,7 @@ func TestAIListTranslationRepository(t *testing.T) {
 
 func TestAIListTranslationRepository_GetBatchAndDelete(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewAIListTranslationRepository(db)
+	repo := repository.NewAIListTranslationRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})

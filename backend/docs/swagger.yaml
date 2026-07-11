@@ -1650,6 +1650,10 @@ paths:
           description: Request Entity Too Large
           schema:
             $ref: '#/definitions/internal_handler.errorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
       summary: Import OPML
       tags:
       - opml

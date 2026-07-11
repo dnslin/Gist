@@ -11,9 +11,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type fixedGenerator struct {
+	id int64
+}
+
+func (g fixedGenerator) NextID() int64 {
+	return g.id
+}
+
+func TestFeedRepositoryUsesInjectedGenerator(t *testing.T) {
+	db := testutil.NewTestDB(t)
+	repo := repository.NewFeedRepository(db, fixedGenerator{id: 424242})
+
+	created, err := repo.Create(context.Background(), model.Feed{Title: "Injected", URL: "https://example.com/injected"})
+	require.NoError(t, err)
+	require.Equal(t, int64(424242), created.ID)
+
+	fetched, err := repo.GetByID(context.Background(), created.ID)
+	require.NoError(t, err)
+	require.Equal(t, created.ID, fetched.ID)
+}
+
 func TestFeedRepository_CreateAndGet(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	reminder := "聚焦核心论点"
@@ -40,7 +61,7 @@ func TestFeedRepository_CreateAndGet(t *testing.T) {
 
 func TestFeedRepository_List(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	folderID := testutil.SeedFolder(t, db, "Test Folder", nil, "article")
@@ -62,7 +83,7 @@ func TestFeedRepository_List(t *testing.T) {
 
 func TestFeedRepository_Update(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFeed(t, db, model.Feed{Title: "Old Title", URL: "url"})
@@ -96,7 +117,7 @@ func TestFeedRepository_Update(t *testing.T) {
 
 func TestFeedRepository_Delete(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFeed(t, db, model.Feed{Title: "To Delete", URL: "url"})
@@ -110,7 +131,7 @@ func TestFeedRepository_Delete(t *testing.T) {
 
 func TestFeedRepository_DeleteBatch(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id1 := testutil.SeedFeed(t, db, model.Feed{Title: "F1", URL: "u1"})
@@ -129,7 +150,7 @@ func TestFeedRepository_DeleteBatch(t *testing.T) {
 
 func TestFeedRepository_FindByURL(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	testutil.SeedFeed(t, db, model.Feed{Title: "Feed", URL: "https://example.com/rss"})
@@ -142,7 +163,7 @@ func TestFeedRepository_FindByURL(t *testing.T) {
 
 func TestFeedRepository_GetByIDs(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id1 := testutil.SeedFeed(t, db, model.Feed{Title: "Feed 1", URL: "url1"})
@@ -155,7 +176,7 @@ func TestFeedRepository_GetByIDs(t *testing.T) {
 
 func TestFeedRepository_ListWithoutIcon(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	icon := "icon.png"
@@ -170,7 +191,7 @@ func TestFeedRepository_ListWithoutIcon(t *testing.T) {
 
 func TestFeedRepository_UpdateIconPath(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFeed(t, db, model.Feed{Title: "Feed", URL: "u"})
@@ -185,7 +206,7 @@ func TestFeedRepository_UpdateIconPath(t *testing.T) {
 
 func TestFeedRepository_UpdateSiteURL(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFeed(t, db, model.Feed{Title: "Feed", URL: "u"})
@@ -200,7 +221,7 @@ func TestFeedRepository_UpdateSiteURL(t *testing.T) {
 
 func TestFeedRepository_UpdateErrorMessage(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFeed(t, db, model.Feed{Title: "Feed", URL: "u"})
@@ -221,7 +242,7 @@ func TestFeedRepository_UpdateErrorMessage(t *testing.T) {
 
 func TestFeedRepository_UpdateType(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFeed(t, db, model.Feed{Title: "Feed", URL: "u"})
@@ -235,7 +256,7 @@ func TestFeedRepository_UpdateType(t *testing.T) {
 
 func TestFeedRepository_UpdateTypeByFolderID(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	folderID := testutil.SeedFolder(t, db, "Folder", nil, "article")
@@ -253,7 +274,7 @@ func TestFeedRepository_UpdateTypeByFolderID(t *testing.T) {
 
 func TestFeedRepository_ClearAllIconPaths(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	icon := "icon.png"
@@ -272,7 +293,7 @@ func TestFeedRepository_ClearAllIconPaths(t *testing.T) {
 
 func TestFeedRepository_ClearAllConditionalGet(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFeedRepository(db)
+	repo := repository.NewFeedRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	etag := "etag"

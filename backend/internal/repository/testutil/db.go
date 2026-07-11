@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -17,20 +16,9 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// snowflakeOnce 确保 snowflake 在所有并行测试中只初始化一次
-var snowflakeOnce sync.Once
-
 // NewTestDB 创建内存 SQLite 数据库并执行所有迁移
 func NewTestDB(t *testing.T) *sql.DB {
 	t.Helper()
-
-	// 线程安全地只初始化一次 snowflake
-	snowflakeOnce.Do(func() {
-		if err := snowflake.Init(0); err != nil {
-			// sync.Once 内无法使用 t.Fatalf，改用 panic
-			panic("failed to initialize snowflake: " + err.Error())
-		}
-	})
 
 	// 使用共享缓存模式以支持内存数据库的并发访问
 	// 每个测试使用唯一的数据库名称以避免冲突
@@ -85,7 +73,7 @@ func SeedFolder(t *testing.T, db *sql.DB, name string, parentID *int64, folderTy
 		folderType = "article"
 	}
 
-	id := snowflake.NextID()
+	id := nextSeedID(t, db, "folders")
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	var parentIDVal interface{} = nil
@@ -110,7 +98,7 @@ func SeedFeed(t *testing.T, db *sql.DB, feed model.Feed) int64 {
 	t.Helper()
 
 	if feed.ID == 0 {
-		feed.ID = snowflake.NextID()
+		feed.ID = nextSeedID(t, db, "feeds")
 	}
 	if feed.Type == "" {
 		feed.Type = "article"
@@ -137,7 +125,7 @@ func SeedEntry(t *testing.T, db *sql.DB, entry model.Entry) int64 {
 	t.Helper()
 
 	if entry.ID == 0 {
-		entry.ID = snowflake.NextID()
+		entry.ID = nextSeedID(t, db, "entries")
 	}
 	if entry.Hash == "" {
 		entry.Hash = defaultEntryHash(entry)
@@ -157,6 +145,25 @@ func SeedEntry(t *testing.T, db *sql.DB, entry model.Entry) int64 {
 	}
 
 	return entry.ID
+}
+
+func NewTestGenerator(t *testing.T) snowflake.Generator {
+	t.Helper()
+	generator, err := snowflake.NewGenerator(0)
+	if err != nil {
+		t.Fatalf("failed to create test snowflake generator: %v", err)
+	}
+	return generator
+}
+
+func nextSeedID(t *testing.T, database *sql.DB, table string) int64 {
+	t.Helper()
+	var id int64
+	query := fmt.Sprintf("SELECT COALESCE(MAX(id), 0) + 1 FROM %s", table)
+	if err := database.QueryRowContext(context.Background(), query).Scan(&id); err != nil {
+		t.Fatalf("failed to allocate seed ID: %v", err)
+	}
+	return id
 }
 
 func defaultEntryHash(entry model.Entry) string {

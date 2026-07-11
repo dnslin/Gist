@@ -1600,6 +1600,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/internal_handler.errorResponse"
                         }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
                     }
                 }
             },

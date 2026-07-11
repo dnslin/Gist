@@ -18,9 +18,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func init() {
-	// Initialize snowflake for integration tests
-	_ = snowflake.Init(1)
+func newIntegrationGenerator(t *testing.T) snowflake.Generator {
+	t.Helper()
+	generator, err := snowflake.NewGenerator(1)
+	require.NoError(t, err)
+	return generator
 }
 
 // Test feeds from OPML - chosen for reliability and speed
@@ -56,9 +58,9 @@ func TestFeedService_Integration_Preview(t *testing.T) {
 	}
 
 	clientFactory := network.NewClientFactoryForTest(nil)
-	feedRepo := repository.NewFeedRepository(setupTestDB(t))
-	folderRepo := repository.NewFolderRepository(setupTestDB(t))
-	entryRepo := repository.NewEntryRepository(setupTestDB(t))
+	feedRepo := repository.NewFeedRepository(setupTestDB(t), newIntegrationGenerator(t))
+	folderRepo := repository.NewFolderRepository(setupTestDB(t), newIntegrationGenerator(t))
+	entryRepo := repository.NewEntryRepository(setupTestDB(t), newIntegrationGenerator(t))
 
 	svc := service.NewFeedService(feedRepo, folderRepo, entryRepo, nil, nil, clientFactory, nil)
 
@@ -90,9 +92,9 @@ func TestFeedService_Integration_AddAndList(t *testing.T) {
 
 	dbConn := setupTestDB(t)
 	clientFactory := network.NewClientFactoryForTest(nil)
-	feedRepo := repository.NewFeedRepository(dbConn)
-	folderRepo := repository.NewFolderRepository(dbConn)
-	entryRepo := repository.NewEntryRepository(dbConn)
+	feedRepo := repository.NewFeedRepository(dbConn, newIntegrationGenerator(t))
+	folderRepo := repository.NewFolderRepository(dbConn, newIntegrationGenerator(t))
+	entryRepo := repository.NewEntryRepository(dbConn, newIntegrationGenerator(t))
 
 	svc := service.NewFeedService(feedRepo, folderRepo, entryRepo, nil, nil, clientFactory, nil)
 
@@ -143,9 +145,9 @@ func TestFeedService_Integration_FetchMultipleFeeds(t *testing.T) {
 
 	dbConn := setupTestDB(t)
 	clientFactory := network.NewClientFactoryForTest(nil)
-	feedRepo := repository.NewFeedRepository(dbConn)
-	folderRepo := repository.NewFolderRepository(dbConn)
-	entryRepo := repository.NewEntryRepository(dbConn)
+	feedRepo := repository.NewFeedRepository(dbConn, newIntegrationGenerator(t))
+	folderRepo := repository.NewFolderRepository(dbConn, newIntegrationGenerator(t))
+	entryRepo := repository.NewEntryRepository(dbConn, newIntegrationGenerator(t))
 
 	svc := service.NewFeedService(feedRepo, folderRepo, entryRepo, nil, nil, clientFactory, nil)
 

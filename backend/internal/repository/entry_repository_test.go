@@ -17,7 +17,7 @@ import (
 
 func TestEntryRepository_CreateAndGet(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Test Feed", URL: "url"})
@@ -49,7 +49,7 @@ func TestEntryRepository_CreateAndGet(t *testing.T) {
 
 func TestEntryRepository_CreateOrUpdate_SameHashUpdatesURL(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Test Feed", URL: "url"})
@@ -84,7 +84,7 @@ func TestEntryRepository_CreateOrUpdate_SameHashUpdatesURL(t *testing.T) {
 
 func TestEntryRepository_CreateOrUpdate_UpgradesLegacyURLHashToGUIDHash(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Test Feed", URL: "url"})
@@ -116,7 +116,7 @@ func TestEntryRepository_CreateOrUpdate_UpgradesLegacyURLHashToGUIDHash(t *testi
 
 func TestEntryRepository_CreateOrUpdate_UpgradesLegacyURLHashToGUIDHash_WhenFragmentChanges(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Test Feed", URL: "url"})
@@ -151,7 +151,7 @@ func TestEntryRepository_CreateOrUpdate_UpgradesLegacyURLHashToGUIDHash_WhenFrag
 
 func TestEntryRepository_CreateOrUpdate_CompatibilitySkipsWhenTargetHashExists(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Test Feed", URL: "url"})
@@ -186,7 +186,7 @@ func TestEntryRepository_CreateOrUpdate_CompatibilitySkipsWhenTargetHashExists(t
 
 func TestEntryRepository_List_Filters(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	folderID := testutil.SeedFolder(t, db, "F1", nil, "article")
@@ -216,7 +216,7 @@ func TestEntryRepository_List_Filters(t *testing.T) {
 
 func TestEntryRepository_UpdateStatus(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Feed", URL: "u"})
@@ -237,7 +237,7 @@ func TestEntryRepository_UpdateStatus(t *testing.T) {
 
 func TestEntryRepository_UpdateManyReadStatus(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Feed", URL: "u"})
@@ -269,7 +269,7 @@ func TestEntryRepository_UpdateManyReadStatus(t *testing.T) {
 
 func TestEntryRepository_MarkAllAsRead(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID1 := testutil.SeedFeed(t, db, model.Feed{Title: "F1", URL: "u1"})
@@ -289,7 +289,7 @@ func TestEntryRepository_MarkAllAsRead(t *testing.T) {
 
 func TestEntryRepository_ClearCaches(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -313,7 +313,7 @@ func TestEntryRepository_ClearCaches(t *testing.T) {
 
 func TestEntryRepository_ExistsByHash(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -332,7 +332,7 @@ func TestEntryRepository_ExistsByHash(t *testing.T) {
 
 func TestEntryRepository_ExistsByLegacyURL(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -354,7 +354,7 @@ func TestEntryRepository_ExistsByLegacyURL(t *testing.T) {
 
 func TestEntryRepository_UpdateReadableContent(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -371,7 +371,7 @@ func TestEntryRepository_UpdateReadableContent(t *testing.T) {
 
 func TestEntryRepository_GetStarredCount(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "F", URL: "u"})
@@ -398,7 +398,7 @@ func TestParseTimePtr(t *testing.T) {
 // See commit 4b9dbc0: fix: Refresh should not overwrite existing published_at
 func TestEntryRepository_CreateOrUpdate_PreservesExistingPublishedAt(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Test Feed", URL: "url"})
@@ -444,7 +444,7 @@ func TestEntryRepository_CreateOrUpdate_PreservesExistingPublishedAt(t *testing.
 // See commit 4b9dbc0: fix: Refresh should not overwrite existing published_at
 func TestEntryRepository_CreateOrUpdate_SetsPublishedAtWhenNull(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewEntryRepository(db)
+	repo := repository.NewEntryRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	feedID := testutil.SeedFeed(t, db, model.Feed{Title: "Test Feed", URL: "url"})

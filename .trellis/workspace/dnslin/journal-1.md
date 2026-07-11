@@ -72,3 +72,37 @@ Fixed Windows path portability, established root VERSION across Go Vite Swagger 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Wails3 shared application runtime
+
+**Date**: 2026-07-12
+**Task**: Wails3 shared application runtime
+**Branch**: `feat/wails3-shared-application-runtime`
+
+### Summary
+
+Extracted the platform-neutral application Runtime, injected instance Snowflake generators, registered asynchronous local-data writers, unified server shutdown, added lifecycle tests and evidence, and updated backend contracts.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `48d4bc6` | (see git log) |
+| `9d8f35f` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

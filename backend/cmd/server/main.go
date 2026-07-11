@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/pprof"
 	"os"
@@ -12,17 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/labstack/echo/v4"
+
+	"gist/backend/internal/application"
 	"gist/backend/internal/config"
-	"gist/backend/internal/db"
-	"gist/backend/internal/handler"
-	transport "gist/backend/internal/http"
-	"gist/backend/internal/repository"
-	"gist/backend/internal/scheduler"
-	"gist/backend/internal/service"
-	"gist/backend/internal/service/ai"
-	"gist/backend/internal/service/anubis"
 	"gist/backend/pkg/logger"
-	"gist/backend/pkg/network"
 	"gist/backend/pkg/snowflake"
 )
 
@@ -32,138 +25,59 @@ import (
 // @BasePath /api
 func main() {
 	cfg := config.Load()
-
 	logger.Init(logger.ParseLevel(cfg.LogLevel))
 
-	if err := snowflake.Init(1); err != nil {
+	generatorOwner := snowflake.NewBootstrapOwner()
+	idGenerator, err := generatorOwner.Init(1)
+	if err != nil {
 		logger.Error("init snowflake", "error", err)
 		os.Exit(1)
 	}
 
-	dbConn, err := db.Open(cfg.DBPath)
+	runtime, err := application.NewRuntime(context.Background(), application.RuntimeOptions{
+		DataDir:           cfg.DataDir,
+		DBPath:            cfg.DBPath,
+		StaticDir:         cfg.StaticDir,
+		EnableSwagger:     cfg.EnableSwagger,
+		SchedulerInterval: 15 * time.Minute,
+		StartScheduler:    true,
+		IDGenerator:       idGenerator,
+	})
 	if err != nil {
-		logger.Error("open database", "error", err)
+		logger.Error("create application runtime", "error", err)
 		os.Exit(1)
 	}
-	defer dbConn.Close()
 
-	folderRepo := repository.NewFolderRepository(dbConn)
-	feedRepo := repository.NewFeedRepository(dbConn)
-	entryRepo := repository.NewEntryRepository(dbConn)
-	settingsRepo := repository.NewSettingsRepository(dbConn)
-	aiSummaryRepo := repository.NewAISummaryRepository(dbConn)
-	aiTranslationRepo := repository.NewAITranslationRepository(dbConn)
-	aiListTranslationRepo := repository.NewAIListTranslationRepository(dbConn)
-	domainRateLimitRepo := repository.NewDomainRateLimitRepository(dbConn)
-
-	// Initialize rate limiter with stored setting
-	initialRateLimit := ai.DefaultRateLimit
-	if setting, err := settingsRepo.Get(context.Background(), "ai.rate_limit"); err == nil && setting != nil {
-		var val int
-		fmt.Sscanf(setting.Value, "%d", &val)
-		if val > 0 {
-			initialRateLimit = val
-		}
-	}
-	rateLimiter := ai.NewRateLimiter(initialRateLimit)
-
-	settingsService := service.NewSettingsService(settingsRepo, rateLimiter)
-
-	// Initialize client factory for proxy and IP stack support
-	clientFactory := network.NewClientFactory(settingsService, settingsService)
-
-	// Initialize Anubis solver for bypassing Anubis protection
-	anubisStore := anubis.NewStore(settingsRepo)
-	anubisSolver := anubis.NewSolver(clientFactory, anubisStore)
-
-	iconService := service.NewIconService(cfg.DataDir, feedRepo, clientFactory, anubisSolver)
-
-	// Backfill icons for existing feeds (run in background)
-	backfillCtx, cancelBackfill := context.WithCancel(context.Background())
-	var backfillWG sync.WaitGroup
-	backfillWG.Add(1)
-	go func() {
-		defer backfillWG.Done()
-		if err := iconService.BackfillIcons(backfillCtx); err != nil && !errors.Is(err, context.Canceled) {
-			logger.Warn("backfill icons", "error", err)
-		}
-	}()
-
-	folderService := service.NewFolderService(folderRepo, feedRepo)
-	feedService := service.NewFeedService(feedRepo, folderRepo, entryRepo, iconService, settingsService, clientFactory, anubisSolver)
-	entryService := service.NewEntryService(entryRepo, feedRepo, folderRepo)
-	readabilityService := service.NewReadabilityService(entryRepo, clientFactory, anubisSolver)
-	domainRateLimitService := service.NewDomainRateLimitService(domainRateLimitRepo)
-	refreshService := service.NewRefreshService(feedRepo, entryRepo, settingsService, iconService, clientFactory, anubisSolver, domainRateLimitService)
-	opmlService := service.NewOPMLService(folderService, feedService, refreshService, iconService, folderRepo, feedRepo)
-
-	proxyService := service.NewProxyService(clientFactory, anubisSolver)
-	aiService := service.NewAIServiceWithFeedContext(aiSummaryRepo, aiTranslationRepo, aiListTranslationRepo, settingsRepo, rateLimiter, entryRepo, feedRepo)
-	authService := service.NewAuthService(settingsRepo)
-
-	folderHandler := handler.NewFolderHandler(folderService)
-	feedHandler := handler.NewFeedHandler(feedService, refreshService)
-	entryHandler := handler.NewEntryHandler(entryService, readabilityService)
-	importTaskService := service.NewImportTaskService()
-	opmlHandler := handler.NewOPMLHandler(opmlService, importTaskService)
-	iconHandler := handler.NewIconHandler(iconService)
-	proxyHandler := handler.NewProxyHandler(proxyService)
-	settingsHandler := handler.NewSettingsHandler(settingsService, clientFactory)
-	aiHandler := handler.NewAIHandler(aiService)
-	authHandler := handler.NewAuthHandler(authService)
-	domainRateLimitHandler := handler.NewDomainRateLimitHandler(domainRateLimitService)
-
-	router := transport.NewRouter(folderHandler, feedHandler, entryHandler, opmlHandler, iconHandler, proxyHandler, settingsHandler, aiHandler, authHandler, domainRateLimitHandler, authService, cfg.StaticDir, cfg.EnableSwagger)
+	trackedRouter := newTrackedHTTPServer(runtime.Router)
 	pprofServer := startPprofServer(cfg.PprofAddr)
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 
-	// Start background scheduler (15 minutes interval)
-	sched := scheduler.New(refreshService, 15*time.Minute)
-	sched.Start()
-
-	// Handle graceful shutdown
+	shutdown := shutdownRunner{
+		http:           trackedRouter,
+		pprof:          pprofServer,
+		runtime:        runtime,
+		overallTimeout: 10 * time.Second,
+		drainTimeout:   8 * time.Second,
+	}
+	shutdownDone := make(chan struct{})
 	go func() {
-		sigCh := make(chan os.Signal, 1)
-		signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-		<-sigCh
-		logger.Info("shutting down...")
-
-		// Create a deadline for shutdown
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		sched.Stop()
-		readabilityService.Close()
-		proxyService.Close()
-		cancelBackfill()
-
-		// Wait for backfill task to exit within shutdown deadline.
-		backfillDone := make(chan struct{})
-		go func() {
-			backfillWG.Wait()
-			close(backfillDone)
-		}()
-		select {
-		case <-backfillDone:
-		case <-ctx.Done():
-			logger.Warn("backfill stop timeout")
-		}
-
-		if pprofServer != nil {
-			if err := pprofServer.Shutdown(ctx); err != nil {
-				logger.Error("pprof shutdown", "module", "server", "action", "shutdown", "resource", "pprof", "result", "failed", "error", err)
-			}
-		}
-		// Gracefully shutdown the HTTP server
-		if err := router.Shutdown(ctx); err != nil {
-			logger.Error("server shutdown", "error", err)
+		defer close(shutdownDone)
+		if shutdownErr := runOnSignal(sigCh, func() error {
+			logger.Info("shutting down...")
+			return shutdown.Run(context.Background())
+		}); shutdownErr != nil {
+			logger.Error("server shutdown", "error", shutdownErr)
 		}
 	}()
 
-	if err := router.Start(cfg.Addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := startListener(trackedRouter, cfg.Addr); err != nil {
 		logger.Error("start server", "error", err)
-		os.Exit(1)
+		_ = runtime.Close(context.Background())
+		return
 	}
-
+	<-shutdownDone
 	logger.Info("server stopped")
 }
 
@@ -193,4 +107,151 @@ func startPprofServer(addr string) *http.Server {
 	}()
 
 	return server
+}
+
+func runOnSignal(signals <-chan os.Signal, shutdown func() error) error {
+	<-signals
+	return shutdown()
+}
+
+type listenerServer interface {
+	Start(string) error
+}
+
+type shutdownHTTPServer interface {
+	Shutdown(context.Context) error
+	Close() error
+	Wait(context.Context) error
+}
+
+type shutdownPprofServer interface {
+	Shutdown(context.Context) error
+	Close() error
+}
+
+type shutdownRuntime interface {
+	Quiesce(context.Context) error
+	Close(context.Context) error
+}
+
+type shutdownRunner struct {
+	http           shutdownHTTPServer
+	pprof          shutdownPprofServer
+	runtime        shutdownRuntime
+	overallTimeout time.Duration
+	drainTimeout   time.Duration
+}
+
+func (r shutdownRunner) Run(parent context.Context) error {
+	overallCtx, cancelOverall := context.WithTimeout(parent, r.overallTimeout)
+	defer cancelOverall()
+	drainCtx, cancelDrain := context.WithTimeout(overallCtx, r.drainTimeout)
+	defer cancelDrain()
+
+	var wg sync.WaitGroup
+	errs := make(chan error, 3)
+	runDrain := func(shutdown func(context.Context) error) {
+		defer wg.Done()
+		if err := shutdown(drainCtx); err != nil {
+			errs <- err
+		}
+	}
+	wg.Add(2)
+	go runDrain(r.http.Shutdown)
+	go runDrain(r.runtime.Quiesce)
+	if r.pprof != nil {
+		wg.Add(1)
+		go runDrain(r.pprof.Shutdown)
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		logger.Warn("graceful drain", "error", err)
+	}
+	if drainCtx.Err() != nil {
+		if err := r.http.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+		if r.pprof != nil {
+			if err := r.pprof.Close(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				return err
+			}
+		}
+		if err := r.http.Wait(overallCtx); err != nil {
+			return err
+		}
+	}
+	return r.runtime.Close(overallCtx)
+}
+
+func startListener(server listenerServer, addr string) error {
+	err := server.Start(addr)
+	if errors.Is(err, http.ErrServerClosed) {
+		return nil
+	}
+	return err
+}
+
+type trackedHTTPServer struct {
+	server  *echo.Echo
+	tracker requestTracker
+}
+
+func newTrackedHTTPServer(server *echo.Echo) *trackedHTTPServer {
+	tracked := &trackedHTTPServer{server: server}
+	server.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			done := tracked.tracker.Begin()
+			defer done()
+			return next(c)
+		}
+	})
+	return tracked
+}
+
+func (s *trackedHTTPServer) Start(addr string) error { return s.server.Start(addr) }
+
+func (s *trackedHTTPServer) Shutdown(ctx context.Context) error { return s.server.Shutdown(ctx) }
+
+func (s *trackedHTTPServer) Close() error { return s.server.Close() }
+
+func (s *trackedHTTPServer) Wait(ctx context.Context) error { return s.tracker.Wait(ctx) }
+
+type requestTracker struct {
+	mu     sync.Mutex
+	active int
+	idle   chan struct{}
+}
+
+func (t *requestTracker) Begin() func() {
+	t.mu.Lock()
+	if t.active == 0 {
+		t.idle = make(chan struct{})
+	}
+	t.active++
+	t.mu.Unlock()
+	return func() {
+		t.mu.Lock()
+		t.active--
+		if t.active == 0 {
+			close(t.idle)
+		}
+		t.mu.Unlock()
+	}
+}
+
+func (t *requestTracker) Wait(ctx context.Context) error {
+	t.mu.Lock()
+	if t.active == 0 {
+		t.mu.Unlock()
+		return nil
+	}
+	idle := t.idle
+	t.mu.Unlock()
+	select {
+	case <-idle:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

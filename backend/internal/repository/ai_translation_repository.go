@@ -18,11 +18,12 @@ type AITranslationRepository interface {
 }
 
 type aiTranslationRepository struct {
-	db dbtx
+	db        dbtx
+	generator snowflake.Generator
 }
 
-func NewAITranslationRepository(db dbtx) AITranslationRepository {
-	return &aiTranslationRepository{db: db}
+func NewAITranslationRepository(db dbtx, generator snowflake.Generator) AITranslationRepository {
+	return &aiTranslationRepository{db: db, generator: generator}
 }
 
 func (r *aiTranslationRepository) Get(ctx context.Context, entryID int64, isReadability bool, language string) (*model.AITranslation, error) {
@@ -57,7 +58,7 @@ func (r *aiTranslationRepository) Get(ctx context.Context, entryID int64, isRead
 }
 
 func (r *aiTranslationRepository) Save(ctx context.Context, entryID int64, isReadability bool, language, content string) error {
-	id := snowflake.NextID()
+	id := r.generator.NextID()
 	now := formatTime(time.Now())
 
 	isReadabilityInt := 0

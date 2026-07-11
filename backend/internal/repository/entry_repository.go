@@ -46,11 +46,12 @@ type EntryRepository interface {
 }
 
 type entryRepository struct {
-	db dbtx
+	db        dbtx
+	generator snowflake.Generator
 }
 
-func NewEntryRepository(db dbtx) EntryRepository {
-	return &entryRepository{db: db}
+func NewEntryRepository(db dbtx, generator snowflake.Generator) EntryRepository {
+	return &entryRepository{db: db, generator: generator}
 }
 
 func (r *entryRepository) GetByID(ctx context.Context, id int64) (model.Entry, error) {
@@ -295,7 +296,7 @@ func parseTimePtr(s string) *time.Time {
 }
 
 func (r *entryRepository) CreateOrUpdate(ctx context.Context, entry model.Entry) error {
-	id := snowflake.NextID()
+	id := r.generator.NextID()
 	now := formatTime(time.Now())
 
 	var publishedAt interface{}

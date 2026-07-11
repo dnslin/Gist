@@ -12,7 +12,7 @@ import (
 func TestImportTaskService_Lifecycle(t *testing.T) {
 	svc := service.NewImportTaskService()
 
-	id, ctx := svc.Start(3)
+	id, ctx := svc.Start(3, context.Background())
 	require.NotEmpty(t, id)
 
 	svc.Update(1, "Feed A")
@@ -46,7 +46,7 @@ func TestImportTaskService_Lifecycle(t *testing.T) {
 func TestImportTaskService_FailAndCancel(t *testing.T) {
 	svc := service.NewImportTaskService()
 
-	_, ctx := svc.Start(2)
+	_, ctx := svc.Start(2, context.Background())
 	svc.Update(1, "Feed A")
 
 	svc.Fail(context.Canceled)
@@ -57,7 +57,7 @@ func TestImportTaskService_FailAndCancel(t *testing.T) {
 
 	require.False(t, svc.Cancel(), "cancel should return false when task is not running")
 
-	_, ctx2 := svc.Start(1)
+	_, ctx2 := svc.Start(1, context.Background())
 	svc.Update(1, "Feed B")
 
 	require.True(t, svc.Cancel())
@@ -82,7 +82,7 @@ func TestImportTaskService_FailAndCancel(t *testing.T) {
 
 func TestImportTaskService_GetReturnsCopy(t *testing.T) {
 	svc := service.NewImportTaskService()
-	svc.Start(1)
+	svc.Start(1, context.Background())
 	svc.Complete(service.ImportResult{FeedsCreated: 1})
 
 	first := svc.Get()
@@ -92,4 +92,38 @@ func TestImportTaskService_GetReturnsCopy(t *testing.T) {
 
 	second := svc.Get()
 	require.Equal(t, 1, second.Result.FeedsCreated)
+}
+
+func TestImportTaskService_ParentCancellation(t *testing.T) {
+	svc := service.NewImportTaskService()
+	parent, cancel := context.WithCancel(context.Background())
+	_, ctx := svc.Start(1, parent)
+
+	cancel()
+
+	select {
+	case <-ctx.Done():
+		require.ErrorIs(t, ctx.Err(), context.Canceled)
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("expected task context to inherit parent cancellation")
+	}
+	require.Eventually(t, func() bool {
+		task := svc.Get()
+		return task != nil && task.Status == "cancelled"
+	}, 200*time.Millisecond, time.Millisecond)
+}
+
+func TestImportTaskService_OldParentCancellationDoesNotOverwriteNewTask(t *testing.T) {
+	svc := service.NewImportTaskService()
+	oldParent, cancelOld := context.WithCancel(context.Background())
+	oldID, _ := svc.Start(1, oldParent)
+	cancelOld()
+
+	newID, _ := svc.Start(2, context.Background())
+	require.NotEqual(t, oldID, newID)
+
+	time.Sleep(20 * time.Millisecond)
+	current := svc.Get()
+	require.Equal(t, newID, current.ID)
+	require.Equal(t, "running", current.Status)
 }

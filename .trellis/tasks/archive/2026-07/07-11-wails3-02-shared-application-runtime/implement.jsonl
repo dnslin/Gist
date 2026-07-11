@@ -1,0 +1,8 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Constructor injection, global-state prohibition, synchronization, graceful shutdown, backend commands and test conventions."}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"SQLite ownership, migration-on-open, repository persistence and Snowflake ID contracts that Runtime must preserve."}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Existing service-to-handler error mapping required for WriterRegistry admission rejection without changing unrelated API behavior."}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Backend layer boundaries and placement rules for internal/application and cmd/server."}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/prd.md","reason":"Parent stable requirements and acceptance criteria narrowed by Child 02."}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/design.md","reason":"Authoritative ApplicationRuntime ownership, lifecycle and dependency-direction design."}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/implement.md","reason":"Child 02 scope, start gate, evidence matrix and cross-child archive gate."}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-01-windows-baseline-version/evidence/E-C01-WEB-SERVER-DOCKER-REGRESSION.md","reason":"Archived predecessor baseline and known Windows/Linux-race/Docker environment limits."}

@@ -23,7 +23,7 @@ type ImportTask struct {
 }
 
 type ImportTaskService interface {
-	Start(total int) (string, context.Context)
+	Start(total int, parent context.Context) (string, context.Context)
 	Update(current int, feed string)
 	Complete(result ImportResult)
 	Fail(err error)
@@ -35,23 +35,30 @@ type importTaskManager struct {
 	mu      sync.RWMutex
 	current *ImportTask
 	cancel  context.CancelFunc
+	done    chan struct{}
 }
 
 func NewImportTaskService() ImportTaskService {
 	return &importTaskManager{}
 }
 
-func (m *importTaskManager) Start(total int) (string, context.Context) {
+func (m *importTaskManager) Start(total int, parent context.Context) (string, context.Context) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	// Cancel any existing task
+	if m.done != nil {
+		close(m.done)
+		m.done = nil
+	}
 	if m.cancel != nil {
 		m.cancel()
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(parent)
 	m.cancel = cancel
+	done := make(chan struct{})
+	m.done = done
 
 	id := uuid.New().String()
 	m.current = &ImportTask{
@@ -62,7 +69,29 @@ func (m *importTaskManager) Start(total int) (string, context.Context) {
 		CreatedAt: time.Now(),
 	}
 	logger.Info("import task started", "module", "service", "action", "import", "resource", "opml", "result", "ok", "task_id", id, "total", total)
+	go m.watchCancellation(id, ctx, done)
 	return id, ctx
+}
+
+func (m *importTaskManager) watchCancellation(id string, ctx context.Context, done <-chan struct{}) {
+	select {
+	case <-done:
+		return
+	case <-ctx.Done():
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.current == nil || m.current.ID != id || m.current.Status != "running" {
+		return
+	}
+	m.current.Status = "cancelled"
+	m.current.Feed = ""
+	m.cancel = nil
+	if m.done == done {
+		m.done = nil
+	}
+	logger.Warn("import task cancelled", "module", "service", "action", "import", "resource", "opml", "result", "cancelled", "task_id", id)
 }
 
 func (m *importTaskManager) Update(current int, feed string) {
@@ -79,10 +108,14 @@ func (m *importTaskManager) Complete(result ImportResult) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.current != nil {
+	if m.current != nil && m.current.Status == "running" {
 		m.current.Status = "done"
 		m.current.Result = &result
 		m.current.Feed = ""
+		if m.done != nil {
+			close(m.done)
+			m.done = nil
+		}
 		logger.Info("import task completed", "module", "service", "action", "import", "resource", "opml", "result", "ok", "task_id", m.current.ID, "feeds_created", result.FeedsCreated, "feeds_skipped", result.FeedsSkipped)
 	}
 }
@@ -91,10 +124,14 @@ func (m *importTaskManager) Fail(err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.current != nil {
+	if m.current != nil && m.current.Status == "running" {
 		m.current.Status = "error"
 		m.current.Error = err.Error()
 		m.current.Feed = ""
+		if m.done != nil {
+			close(m.done)
+			m.done = nil
+		}
 		logger.Error("import task failed", "module", "service", "action", "import", "resource", "opml", "result", "failed", "task_id", m.current.ID, "error", err)
 	}
 }
@@ -129,6 +166,10 @@ func (m *importTaskManager) Cancel() bool {
 		m.cancel = nil
 	}
 
+	if m.done != nil {
+		close(m.done)
+		m.done = nil
+	}
 	m.current.Status = "cancelled"
 	m.current.Feed = ""
 	logger.Warn("import task cancelled", "module", "service", "action", "import", "resource", "opml", "result", "cancelled", "task_id", m.current.ID)

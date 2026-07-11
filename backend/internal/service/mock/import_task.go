@@ -94,18 +94,18 @@ func (mr *MockImportTaskServiceMockRecorder) Get() *gomock.Call {
 }
 
 // Start mocks base method.
-func (m *MockImportTaskService) Start(total int) (string, context.Context) {
+func (m *MockImportTaskService) Start(total int, parent context.Context) (string, context.Context) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Start", total)
+	ret := m.ctrl.Call(m, "Start", total, parent)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(context.Context)
 	return ret0, ret1
 }
 
 // Start indicates an expected call of Start.
-func (mr *MockImportTaskServiceMockRecorder) Start(total any) *gomock.Call {
+func (mr *MockImportTaskServiceMockRecorder) Start(total, parent any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockImportTaskService)(nil).Start), total)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Start", reflect.TypeOf((*MockImportTaskService)(nil).Start), total, parent)
 }
 
 // Update mocks base method.

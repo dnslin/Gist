@@ -19,11 +19,12 @@ type AIListTranslationRepository interface {
 }
 
 type aiListTranslationRepository struct {
-	db dbtx
+	db        dbtx
+	generator snowflake.Generator
 }
 
-func NewAIListTranslationRepository(db dbtx) AIListTranslationRepository {
-	return &aiListTranslationRepository{db: db}
+func NewAIListTranslationRepository(db dbtx, generator snowflake.Generator) AIListTranslationRepository {
+	return &aiListTranslationRepository{db: db, generator: generator}
 }
 
 func (r *aiListTranslationRepository) Get(ctx context.Context, entryID int64, language string) (*model.AIListTranslation, error) {
@@ -93,7 +94,7 @@ func (r *aiListTranslationRepository) GetBatch(ctx context.Context, entryIDs []i
 }
 
 func (r *aiListTranslationRepository) Save(ctx context.Context, entryID int64, language, title, summary string) error {
-	id := snowflake.NextID()
+	id := r.generator.NextID()
 	now := formatTime(time.Now())
 
 	_, err := r.db.ExecContext(

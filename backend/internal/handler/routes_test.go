@@ -35,7 +35,7 @@ func TestHandler_RegisterRoutes(t *testing.T) {
 	handler.NewFeedHandler(nil, nil).RegisterRoutes(g)
 	handler.NewFolderHandler(nil).RegisterRoutes(g)
 	handler.NewProxyHandler(nil).RegisterRoutes(g)
-	handler.NewOPMLHandler(nil, nil).RegisterRoutes(g)
+	handler.NewOPMLHandler(nil, nil, nil).RegisterRoutes(g)
 	handler.NewSettingsHandler(nil, network.NewClientFactoryForTest(&http.Client{})).RegisterRoutes(g)
 
 	iconHandler := handler.NewIconHandler(nil)

@@ -12,7 +12,7 @@ import (
 
 func TestDomainRateLimitRepository(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewDomainRateLimitRepository(db)
+	repo := repository.NewDomainRateLimitRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	// Create
