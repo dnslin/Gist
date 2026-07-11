@@ -23,3 +23,4 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 <!-- TRELLIS:END -->
 
 .rules
+you have to call me dnslin
