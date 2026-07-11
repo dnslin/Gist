@@ -5,3 +5,36 @@
 
 ---
 
+
+
+## Session 1: 补全项目开发规范
+
+**Date**: 2026-07-11
+**Task**: 补全项目开发规范
+**Branch**: `main`
+
+### Summary
+
+基于现有 Go 后端与 React 前端源码补全 Trellis 开发规范，记录目录、数据库、错误、日志、组件、Hook、状态、类型及质量契约，并完成全量审查与任务归档。
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ae1c843` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
