@@ -76,10 +76,49 @@ type Runtime struct {
 	closeDone         chan struct{}
 	closeErr          error
 }
+type runtimeBuildStage string
+
+const (
+	buildDatabase     runtimeBuildStage = "database"
+	buildRepositories runtimeBuildStage = "repositories"
+	buildServices     runtimeBuildStage = "services"
+	buildRouter       runtimeBuildStage = "router"
+	buildScheduler    runtimeBuildStage = "scheduler"
+	buildBackfill     runtimeBuildStage = "backfill"
+)
+
+type runtimeBuilder struct {
+	checkpoint       func(runtimeBuildStage) error
+	cleanupObserved  func(string)
+	activateObserved func(string)
+}
+
+func (b runtimeBuilder) reached(stage runtimeBuildStage) error {
+	if b.checkpoint == nil {
+		return nil
+	}
+	return b.checkpoint(stage)
+}
+
+func (b runtimeBuilder) cleaned(resource string) {
+	if b.cleanupObserved != nil {
+		b.cleanupObserved(resource)
+	}
+}
+
+func (b runtimeBuilder) activated(name string) {
+	if b.activateObserved != nil {
+		b.activateObserved(name)
+	}
+}
 
 // NewRuntime builds the complete application graph before activating any
 // asynchronous writer. A build failure therefore cannot leave a worker behind.
 func NewRuntime(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
+	return (runtimeBuilder{}).Build(ctx, options)
+}
+
+func (b runtimeBuilder) Build(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
 	if options.IDGenerator == nil {
 		return nil, ErrMissingIDGenerator
 	}
@@ -98,6 +137,17 @@ func NewRuntime(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
 	}
 
 	rootCtx, rootCancel := context.WithCancel(ctx)
+	cleanups := []func(){func() { rootCancel(); b.cleaned("root") }}
+	cleanupBuild := func() {
+		for i := len(cleanups) - 1; i >= 0; i-- {
+			cleanups[i]()
+		}
+	}
+	fail := func(stage runtimeBuildStage, err error) (*Runtime, error) {
+		cleanupBuild()
+		return nil, fmt.Errorf("build runtime %s: %w", stage, err)
+	}
+
 	r := &Runtime{
 		rootCancel:    rootCancel,
 		state:         runtimeOpen,
@@ -113,13 +163,10 @@ func NewRuntime(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
 		return nil, fmt.Errorf("open runtime database: %w", err)
 	}
 	r.db = dbConn
-	built := false
-	defer func() {
-		if !built {
-			rootCancel()
-			_ = dbConn.Close()
-		}
-	}()
+	cleanups = append(cleanups, func() { _ = dbConn.Close(); b.cleaned("database") })
+	if err := b.reached(buildDatabase); err != nil {
+		return fail(buildDatabase, err)
+	}
 
 	folderRepo := repository.NewFolderRepository(dbConn, options.IDGenerator)
 	feedRepo := repository.NewFeedRepository(dbConn, options.IDGenerator)
@@ -129,6 +176,9 @@ func NewRuntime(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
 	aiTranslationRepo := repository.NewAITranslationRepository(dbConn, options.IDGenerator)
 	aiListTranslationRepo := repository.NewAIListTranslationRepository(dbConn, options.IDGenerator)
 	domainRateLimitRepo := repository.NewDomainRateLimitRepository(dbConn, options.IDGenerator)
+	if err := b.reached(buildRepositories); err != nil {
+		return fail(buildRepositories, err)
+	}
 
 	initialRateLimit := ai.DefaultRateLimit
 	if setting, getErr := settingsRepo.Get(rootCtx, "ai.rate_limit"); getErr == nil && setting != nil {
@@ -154,6 +204,13 @@ func NewRuntime(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
 	r.AI = service.NewAIServiceWithFeedContext(aiSummaryRepo, aiTranslationRepo, aiListTranslationRepo, settingsRepo, rateLimiter, entryRepo, feedRepo, launcher)
 	r.Auth = service.NewAuthService(settingsRepo)
 	r.ImportTasks = service.NewImportTaskService()
+	cleanups = append(cleanups,
+		func() { r.readability.Close(); b.cleaned("readability") },
+		func() { r.proxy.Close(); b.cleaned("proxy") },
+	)
+	if err := b.reached(buildServices); err != nil {
+		return fail(buildServices, err)
+	}
 
 	folderHandler := handler.NewFolderHandler(folderService)
 	feedHandler := handler.NewFeedHandler(feedService, refreshService)
@@ -166,6 +223,9 @@ func NewRuntime(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
 	authHandler := handler.NewAuthHandler(r.Auth)
 	domainRateLimitHandler := handler.NewDomainRateLimitHandler(domainRateLimitService)
 	r.Router = transport.NewRouter(folderHandler, feedHandler, entryHandler, opmlHandler, iconHandler, proxyHandler, settingsHandler, aiHandler, authHandler, domainRateLimitHandler, r.Auth, options.StaticDir, options.EnableSwagger)
+	if err := b.reached(buildRouter); err != nil {
+		return fail(buildRouter, err)
+	}
 
 	if options.StartScheduler {
 		r.scheduler = scheduler.New(refreshService, interval, launcher)
@@ -173,18 +233,29 @@ func NewRuntime(ctx context.Context, options RuntimeOptions) (*Runtime, error) {
 	if r.scheduler == nil {
 		close(r.schedulerDone)
 	}
-
-	built = true
-	if err := launcher.LaunchWriter(rootCtx, service.WriterBackground, func(writerCtx context.Context) {
-		if backfillErr := iconService.BackfillIcons(writerCtx); backfillErr != nil && !errors.Is(backfillErr, context.Canceled) {
-			logger.Warn("backfill icons", "error", backfillErr)
-		}
-	}); err != nil {
-		_ = r.Close(context.Background())
-		return nil, fmt.Errorf("activate icon backfill: %w", err)
+	if err := b.reached(buildScheduler); err != nil {
+		return fail(buildScheduler, err)
 	}
+
+	backfillReservation, err := launcher.ReserveWriter(rootCtx, service.WriterBackground)
+	if err != nil {
+		return fail(buildBackfill, err)
+	}
+	cleanups = append(cleanups, func() { backfillReservation.Release(); b.cleaned("backfill") })
+	if err := b.reached(buildBackfill); err != nil {
+		return fail(buildBackfill, err)
+	}
+
+	backfillReservation.Publish()
+	backfillReservation.Launch(func(writerCtx context.Context) {
+		if backfillErr := iconService.BackfillIcons(writerCtx); backfillErr != nil && !errors.Is(backfillErr, context.Canceled) {
+			logger.Warn("backfill icons", "module", "service", "action", "backfill", "resource", "icon", "result", "failed", "error", backfillErr)
+		}
+	})
+	b.activated("backfill")
 	if r.scheduler != nil {
 		r.scheduler.Start()
+		b.activated("scheduler")
 	}
 	return r, nil
 }
@@ -294,29 +365,45 @@ type writerRegistryLauncher struct {
 	registry *WriterRegistry
 }
 
-func (l writerRegistryLauncher) LaunchWriter(initiating context.Context, class service.WriterClass, run func(context.Context)) error {
-	writerClass, err := toRegistryWriterClass(class)
+func (l writerRegistryLauncher) ReserveWriter(initiating context.Context, class service.WriterClass) (service.WriterReservation, error) {
+	token, err := l.registry.Register(initiating, class)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	token, err := l.registry.Register(initiating, writerClass)
-	if err != nil {
-		return err
-	}
-	go func() {
-		defer token.Complete()
-		run(token.Context())
-	}()
-	return nil
+	return &writerReservation{token: token}, nil
 }
 
-func toRegistryWriterClass(class service.WriterClass) (WriterClass, error) {
-	switch class {
-	case service.WriterBackground:
-		return WriterBackground, nil
-	case service.WriterRequestBound:
-		return WriterRequestBound, nil
-	default:
-		return 0, ErrInvalidWriterClass
+type writerReservation struct {
+	token    *WriterToken
+	mu       sync.Mutex
+	launched bool
+	released bool
+}
+
+func (r *writerReservation) Context() context.Context { return r.token.Context() }
+func (r *writerReservation) Publish()                 { r.token.Publish() }
+
+func (r *writerReservation) Launch(run func(context.Context)) {
+	r.mu.Lock()
+	if r.launched || r.released {
+		r.mu.Unlock()
+		return
 	}
+	r.launched = true
+	r.mu.Unlock()
+	go func() {
+		defer r.token.Complete()
+		run(r.token.Context())
+	}()
+}
+
+func (r *writerReservation) Release() {
+	r.mu.Lock()
+	if r.launched || r.released {
+		r.mu.Unlock()
+		return
+	}
+	r.released = true
+	r.mu.Unlock()
+	r.token.Complete()
 }

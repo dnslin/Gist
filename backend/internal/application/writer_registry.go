@@ -4,14 +4,8 @@ import (
 	"context"
 	"errors"
 	"sync"
-)
 
-// WriterClass controls how a writer is treated while the application quiesces.
-type WriterClass uint8
-
-const (
-	WriterBackground WriterClass = iota + 1
-	WriterRequestBound
+	"gist/backend/internal/service"
 )
 
 var (
@@ -34,12 +28,14 @@ type WriterRegistry struct {
 // WriterToken is reserved before a writer is launched. Complete must be called
 // when the writer exits; repeated calls are safe.
 type WriterToken struct {
-	registry *WriterRegistry
-	class    WriterClass
-	ctx      context.Context
-	cancel   context.CancelFunc
-	stopRoot func() bool
-	once     sync.Once
+	registry       *WriterRegistry
+	class          service.WriterClass
+	ctx            context.Context
+	cancel         context.CancelFunc
+	stopRoot       func() bool
+	stopInitiating func() bool
+	publishOnce    sync.Once
+	completeOnce   sync.Once
 }
 
 func NewWriterRegistry(root context.Context) *WriterRegistry {
@@ -55,10 +51,10 @@ func NewWriterRegistry(root context.Context) *WriterRegistry {
 }
 
 // Register reserves admission and returns the linked writer context. The
-// initiating context supplies values and cancellation; Runtime root
-// cancellation is linked independently.
-func (r *WriterRegistry) Register(initiating context.Context, class WriterClass) (*WriterToken, error) {
-	if class != WriterBackground && class != WriterRequestBound {
+// initiating context supplies values and cancellation until Publish transfers
+// ownership to an accepted task. Runtime-root cancellation always remains linked.
+func (r *WriterRegistry) Register(initiating context.Context, class service.WriterClass) (*WriterToken, error) {
+	if class != service.WriterBackground && class != service.WriterRequestBound {
 		return nil, ErrInvalidWriterClass
 	}
 	if initiating == nil {
@@ -71,8 +67,9 @@ func (r *WriterRegistry) Register(initiating context.Context, class WriterClass)
 		return nil, ErrWriterAdmissionClosed
 	}
 
-	ctx, cancel := context.WithCancel(initiating)
+	ctx, cancel := context.WithCancel(context.WithoutCancel(initiating))
 	token := &WriterToken{registry: r, class: class, ctx: ctx, cancel: cancel}
+	token.stopInitiating = context.AfterFunc(initiating, cancel)
 	token.stopRoot = context.AfterFunc(r.root, cancel)
 	r.writers[token] = struct{}{}
 	return token, nil
@@ -80,15 +77,29 @@ func (r *WriterRegistry) Register(initiating context.Context, class WriterClass)
 
 func (t *WriterToken) Context() context.Context { return t.ctx }
 
-// Complete releases the reservation exactly once and cancels the linked
-// context so any child operations owned by the writer are also released.
+// Publish transfers cancellation ownership away from the initiating request.
+func (t *WriterToken) Publish() {
+	if t == nil {
+		return
+	}
+	t.publishOnce.Do(func() {
+		if t.stopInitiating != nil {
+			t.stopInitiating()
+		}
+	})
+}
+
+// Complete releases the reservation exactly once and cancels the linked context.
 func (t *WriterToken) Complete() {
 	if t == nil {
 		return
 	}
-	t.once.Do(func() {
+	t.completeOnce.Do(func() {
 		if t.stopRoot != nil {
 			t.stopRoot()
+		}
+		if t.stopInitiating != nil {
+			t.stopInitiating()
 		}
 		t.cancel()
 		t.registry.complete(t)
@@ -106,8 +117,7 @@ func (r *WriterRegistry) complete(token *WriterToken) {
 
 // Quiesce permanently closes admission, immediately cancels background
 // writers, and waits for bound writers to complete. If waitCtx expires, all
-// remaining bound writers are force-cancelled. A later call continues waiting
-// for their completion.
+// remaining bound writers are force-cancelled. A later call continues waiting.
 func (r *WriterRegistry) Quiesce(waitCtx context.Context) error {
 	if waitCtx == nil {
 		waitCtx = context.Background()
@@ -117,7 +127,7 @@ func (r *WriterRegistry) Quiesce(waitCtx context.Context) error {
 	if r.accepting {
 		r.accepting = false
 		for writer := range r.writers {
-			if writer.class == WriterBackground {
+			if writer.class == service.WriterBackground {
 				writer.cancel()
 			}
 		}
@@ -146,7 +156,7 @@ func (r *WriterRegistry) forceCancelBound() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	for writer := range r.writers {
-		if writer.class == WriterRequestBound {
+		if writer.class == service.WriterRequestBound {
 			writer.cancel()
 		}
 	}

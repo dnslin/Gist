@@ -31,30 +31,36 @@ func TestOPMLService_Import_Invalid(t *testing.T) {
 	defer ctrl.Finish()
 
 	svc := service.NewOPMLService(nil, nil, nil, nil, mock_repo.NewMockFolderRepository(ctrl), mock_repo.NewMockFeedRepository(ctrl))
-	_, err := svc.Import(context.Background(), strings.NewReader("<invalid"), nil)
+	_, _, err := svc.Import(context.Background(), strings.NewReader("<invalid"), nil)
 	require.ErrorIs(t, err, service.ErrInvalid)
 }
 
-func TestOPMLService_Import_FollowUpInheritsTaskCancellation(t *testing.T) {
+func TestOPMLService_ImportReturnsBeforeBlockingFollowUp(t *testing.T) {
 	started := make(chan struct{})
 	refresh := &refreshServiceStub{started: started, cancelled: make(chan struct{})}
 	svc := service.NewOPMLService(nil, &feedServiceStub{nextID: 1}, refresh, nil, nil, nil)
-	ctx, cancel := context.WithCancel(context.Background())
 
-	done := make(chan error, 1)
-	go func() {
-		_, err := svc.Import(ctx, strings.NewReader(`<?xml version="1.0"?><opml version="2.0"><body><outline text="Feed" xmlUrl="https://example.com/feed"/></body></opml>`), nil)
-		done <- err
-	}()
+	result, followUp, err := svc.Import(context.Background(), strings.NewReader(`<?xml version="1.0"?><opml version="2.0"><body><outline text="Feed" xmlUrl="https://example.com/feed"/></body></opml>`), nil)
+	require.NoError(t, err)
+	require.Equal(t, 1, result.FeedsCreated)
+	require.Equal(t, []int64{1}, followUp.FeedIDs)
+	select {
+	case <-started:
+		t.Fatal("blocking refresh ran before the import core returned")
+	default:
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { defer close(done); svc.RunImportFollowUp(ctx, followUp) }()
 	<-started
 	cancel()
-
 	select {
 	case <-refresh.cancelled:
 	case <-time.After(300 * time.Millisecond):
-		t.Fatal("expected follow-up writer to inherit task cancellation")
+		t.Fatal("expected follow-up to inherit reservation cancellation")
 	}
-	require.NoError(t, <-done)
+	<-done
 }
 
 func TestOPMLService_Import_CreatesFoldersAndFeeds(t *testing.T) {
@@ -75,7 +81,7 @@ func TestOPMLService_Import_CreatesFoldersAndFeeds(t *testing.T) {
 	}
 
 	svc := service.NewOPMLService(folderService, feedService, refreshSvc, iconSvc, folderRepo, nil)
-	result, err := svc.Import(context.Background(), strings.NewReader(sampleOPML), onProgress)
+	result, followUp, err := svc.Import(context.Background(), strings.NewReader(sampleOPML), onProgress)
 	require.NoError(t, err)
 	require.Equal(t, 1, result.FoldersCreated)
 	require.Equal(t, 2, result.FeedsCreated)
@@ -90,6 +96,7 @@ func TestOPMLService_Import_CreatesFoldersAndFeeds(t *testing.T) {
 	require.Equal(t, int64(10), *feedService.calls[0].folderID)
 	require.Nil(t, feedService.calls[1].folderID)
 
+	svc.RunImportFollowUp(context.Background(), followUp)
 	select {
 	case ids := <-refreshSvc.done:
 		require.Len(t, ids, 2)
@@ -124,7 +131,7 @@ func TestOPMLService_Import_EmptyFolderNameUsesUntitled(t *testing.T) {
 </opml>`
 
 	svc := service.NewOPMLService(folderService, feedService, nil, nil, folderRepo, nil)
-	_, err := svc.Import(context.Background(), strings.NewReader(input), nil)
+	_, _, err := svc.Import(context.Background(), strings.NewReader(input), nil)
 	require.NoError(t, err)
 	require.NotEmpty(t, folderService.created)
 	require.Equal(t, "Untitled", folderService.created[0].Name)

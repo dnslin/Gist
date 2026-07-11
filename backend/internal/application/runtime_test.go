@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"gist/backend/internal/application"
+	"gist/backend/internal/service"
 	"gist/backend/pkg/snowflake"
 )
 
@@ -88,7 +89,7 @@ func TestRuntimeActivatesAndStopsScheduler(t *testing.T) {
 func TestRuntimeCloseKeepsDatabaseOpenUntilWritersAreQuiet(t *testing.T) {
 	runtime := newTestRuntime(t)
 
-	token, err := runtime.Writers.Register(context.Background(), application.WriterBackground)
+	token, err := runtime.Writers.Register(context.Background(), service.WriterBackground)
 	require.NoError(t, err)
 	writerCheckedDB := make(chan error, 1)
 	go func() {
@@ -106,7 +107,7 @@ func TestRuntimeCloseKeepsDatabaseOpenUntilWritersAreQuiet(t *testing.T) {
 	_, err = runtime.Auth.CheckUserExists(context.Background())
 	require.Error(t, err, "database must be closed after a successful Runtime.Close")
 	require.NoError(t, runtime.Writers.Quiesce(context.Background()))
-	_, err = runtime.Writers.Register(context.Background(), application.WriterBackground)
+	_, err = runtime.Writers.Register(context.Background(), service.WriterBackground)
 	require.ErrorIs(t, err, application.ErrWriterAdmissionClosed)
 	require.NoError(t, runtime.Close(context.Background()))
 }
@@ -114,7 +115,7 @@ func TestRuntimeCloseKeepsDatabaseOpenUntilWritersAreQuiet(t *testing.T) {
 func TestRuntimeCloseDeadlineCanBeRetried(t *testing.T) {
 	runtime := newTestRuntime(t)
 
-	token, err := runtime.Writers.Register(context.Background(), application.WriterRequestBound)
+	token, err := runtime.Writers.Register(context.Background(), service.WriterRequestBound)
 	require.NoError(t, err)
 
 	closeCtx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
@@ -129,6 +130,41 @@ func TestRuntimeCloseDeadlineCanBeRetried(t *testing.T) {
 	cancelRetry()
 	require.NoError(t, runtime.Quiesce(cancelledCtx))
 	require.NoError(t, runtime.Close(cancelledCtx))
+}
+
+func TestRuntimeConcurrentQuiesceAndCloseAreIdempotent(t *testing.T) {
+	runtime := newTestRuntime(t)
+	token, err := runtime.Writers.Register(context.Background(), service.WriterRequestBound)
+	require.NoError(t, err)
+
+	const callers = 16
+	start := make(chan struct{})
+	results := make(chan error, callers)
+	for range callers {
+		go func() {
+			<-start
+			results <- runtime.Quiesce(context.Background())
+		}()
+	}
+	close(start)
+	token.Complete()
+	for range callers {
+		require.NoError(t, <-results)
+	}
+
+	start = make(chan struct{})
+	for range callers {
+		go func() {
+			<-start
+			results <- runtime.Close(context.Background())
+		}()
+	}
+	close(start)
+	for range callers {
+		require.NoError(t, <-results)
+	}
+	require.NoError(t, runtime.Quiesce(context.Background()))
+	require.NoError(t, runtime.Close(context.Background()))
 }
 
 func TestNilRuntimeCloseAndQuiesceAreSafe(t *testing.T) {

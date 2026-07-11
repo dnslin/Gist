@@ -2,27 +2,30 @@
 
 ## Passed locally
 
-- Backend full non-race suite: 15 packages passed, 8 packages had no tests (`artifact://140`).
+- Backend full non-race suite: 16 packages passed, 7 packages had no tests (`artifact://155`).
 - Backend `go vet ./...`: passed with no output.
-- Integration-tag service suite: passed (`artifact://141`).
-- Runtime/router/server focused suite: passed (`artifact://156`).
+- Backend `go build -v ./...`: passed.
+- Integration-tag service suite: passed (`artifact://154`).
+- Shutdown force-close ordering test passed 20 consecutive runs (`artifact://153`).
+- Runtime, WriterRegistry, OPML, AI, scheduler, handler, and router focused suites passed (`artifact://117`).
+- Linux-target server dependency denylist passed in `cmd/server`: no Wails, `internal/desktop`, or `golang.org/x/sys/windows` dependency.
 - Frontend: 38 test files and 442 tests passed.
 - Frontend ESLint: passed.
-- Frontend TypeScript + Vite production build: passed; PWA generated 57 precache entries (`artifact://98`).
-- Root version suite: 18 tests passed (`artifact://96`).
-- Temporary-data server returned HTTP 200 from `/api/auth/status` and created its SQLite database.
-- Independent concurrency/lifecycle review found no remaining P0/P1 or finish blocker after OPML lifecycle fixes.
+- Frontend TypeScript + Vite production build passed; PWA generated 57 precache entries (`artifact://143`).
+- Root version suite: 18 tests passed (`artifact://141`).
 
-## Unchanged contracts
+## Contract changes and preserved behavior
 
-- No frontend source or DTO changed.
-- No HTTP route, handler response, schema, migration, config environment variable, Dockerfile, or workflow changed.
+- No frontend source or DTO, schema, migration, config environment variable, Dockerfile, or workflow changed.
+- OPML success behavior remains HTTP 200 with a synchronously published task; admission rejection remains HTTP 500 and is now represented in Swagger.
+- OPML core completion publishes `done` before refresh/icon tail work, while the same admitted reservation remains alive through the tail.
 - `cmd/server` remains the only listener/pprof/signal host; Runtime contains no listener.
-- Build graph contains no Wails dependency introduced by this child.
+- Listener bind failures retain the baseline return behavior rather than forcing a new process exit status.
+- The 8-second drain timeout now force-closes HTTP handlers before Runtime/SQLite close.
 
 ## Environment limitations / CI requirements
 
-- Windows `go test -race` cannot build locally because `runtime/cgo` exits with `cgo.exe exit status 2`; Linux race is required in CI.
+- `go test ./... -race -count=1` cannot build locally because `runtime/cgo` reports `cgo.exe exit status 2` (`artifact://147`); Linux race remains required in CI.
 - `golangci-lint` is not installed locally; configured CI lint remains authoritative.
-- Docker is not installed locally, so image build, OCI label, non-root process, `/app/data`, exposed port, and `/api/auth/status` container smoke remain CI-required through the existing Docker workflow.
-- Windows subprocess APIs used locally could not deliver a targetable graceful SIGINT/SIGTERM console event; Linux signal-process smoke remains CI-required.
+- Docker is not installed locally, so image build, OCI label, non-root process, `/app/data`, exposed port, and `/api/auth/status` container smoke remain CI-required.
+- The Windows subprocess environment cannot deliver a targetable graceful console SIGINT/SIGTERM event. Local deterministic tests exercise the exact shared runner for both signals with pprof on/off; Linux process-level signal smoke remains CI-required.

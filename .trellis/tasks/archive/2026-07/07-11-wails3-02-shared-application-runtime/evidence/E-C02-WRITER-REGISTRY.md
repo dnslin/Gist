@@ -13,37 +13,38 @@ All registrations happen before goroutine launch. Admission rejection prevents a
 
 ## Writer inventory
 
-- Scheduler `RefreshAll`: background registration per refresh; Stop cancels and waits.
-- Startup icon backfill: Runtime activation background registration.
-- OPML import: handler reserves one task-bound writer before HTTP 200; task context inherits the writer context. Refresh/backfill tail work completes inside the same reservation.
-- AI `TranslateBlocks` and `TranslateBatch`: request-bound registration before channels are returned; stream and cache persistence share the linked context.
+- Scheduler `RefreshAll`: reserves a background writer per refresh; Stop cancels and waits. Periodic execution uses an injected instance clock in tests.
+- Startup icon backfill: reservation is acquired during Runtime build and launched only after the complete graph is built.
+- OPML import: handler reserves admission, synchronously publishes the task, transfers ownership from the HTTP request, launches, then returns HTTP 200. Task cancellation and Runtime cancellation remain linked. Core completion marks the task done before refresh/backfill tail work; the same reservation stays active until the tail exits.
+- AI `TranslateBlocks` and `TranslateBatch`: request-bound reservation occurs before channels are published; stream and cache persistence share the linked context.
 - Provider/network-only goroutines remain beneath their registered request operation and do not own independent local-data lifetimes.
 
 ## Defects found and closed during review
 
-1. Nested OPML follow-up initially inherited the outer writer context and was cancelled when the outer token completed. It now runs synchronously inside the already admitted OPML task writer.
-2. Parent-context cancellation initially left import status at `running`. A task-ID-scoped watcher now marks only the matching running task cancelled; stale cancellation cannot overwrite a replacement task.
-
-Independent reviewer confirmed both findings closed with no remaining P0/P1 finish blocker.
+1. `LaunchWriter` coupled admission and goroutine launch, allowing HTTP 200 before task publication. It was replaced by the single `ReserveWriter -> Publish -> Launch/Release` path.
+2. OPML used `context.Background()`, discarding pre-accept request cancellation. Reservations now retain initiating cancellation until synchronous task publication, after which the accepted task survives normal HTTP handler return while task/Runtime cancellation remain effective.
+3. Refresh/backfill delayed observable task completion. Import now returns a follow-up descriptor; the handler completes the task first and executes tail work under the same admitted reservation without a nested untracked goroutine.
+4. `WriterClass` existed independently in service and application. `service.WriterClass` is now canonical and the conversion switch is removed.
+5. Parent-context cancellation could leave import status at `running`. The task-ID-scoped watcher marks only the matching running task cancelled, so stale cancellation cannot overwrite a replacement task.
 
 ## Verification
 
 ```text
-go test ./internal/application -count=20
-PASS
+go test ./internal/application ./internal/service ./internal/scheduler ./internal/handler ./internal/http -count=1
+PASS (artifact://117)
 
-go test ./internal/service ./internal/handler ./internal/scheduler
-PASS
+go test ./cmd/server -run TestShutdownRunnerForcesHTTPHandlersBeforeRuntimeClose -count=20
+PASS (artifact://153)
 
-go test -tags=integration ./internal/service
-PASS (artifact://141)
+go test -tags=integration ./internal/service -count=1
+PASS (artifact://154)
 
-go test ./...
-15 packages passed, 8 packages had no tests (artifact://140)
+go test ./... -count=1
+16 packages passed, 7 packages had no tests (artifact://155)
 ```
 
-Tests cover admission, exactly-once completion, invalid class, linked request/task cancellation, immediate background cancellation, graceful bound drain, deadline force-cancel, deadline retry, concurrent registration/completion/quiesce, OPML rejection-before-200, stale task cancellation, AI admission rejection, scheduler immediate/periodic registration and Stop wait.
+Tests cover reservation admission, publish ownership transfer, safe unlaunched release, exactly-once completion, invalid class, pre-publication initiating cancellation, accepted-task survival after HTTP completion, task/root cancellation, immediate background cancellation, graceful bound drain, deadline force-cancel and retry, concurrent lifecycle calls, OPML publish-before-200, task-done-before-tail, rejection-before-success, AI admission/cancellation, controlled scheduler ticks, and Stop cancel/wait.
 
 ## Environment limitation
 
-Windows race build is unavailable because `runtime/cgo` fails with `cgo.exe exit status 2`; Linux race remains required.
+Windows race build is unavailable because `runtime/cgo` fails with `cgo.exe exit status 2` (`artifact://147`); Linux race remains required.

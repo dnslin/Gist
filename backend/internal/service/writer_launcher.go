@@ -10,9 +10,19 @@ const (
 	WriterRequestBound
 )
 
-// WriterLauncher admits and starts asynchronous local-data writers.
-// Implementations must complete admission before returning and must not invoke run
-// when admission is rejected.
+// WriterReservation owns one admitted writer slot. Publish transfers cancellation
+// ownership away from the initiating HTTP request after synchronous task
+// publication. Launch is non-failing and Release safely abandons an unlaunched
+// reservation.
+type WriterReservation interface {
+	Context() context.Context
+	Publish()
+	Launch(run func(context.Context))
+	Release()
+}
+
+// WriterLauncher reserves asynchronous local-data writer capacity before any
+// task publication, goroutine launch, or successful response.
 type WriterLauncher interface {
-	LaunchWriter(initiating context.Context, class WriterClass, run func(context.Context)) error
+	ReserveWriter(initiating context.Context, class WriterClass) (WriterReservation, error)
 }

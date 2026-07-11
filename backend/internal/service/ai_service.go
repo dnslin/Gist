@@ -310,8 +310,12 @@ func (s *aiService) TranslateBlocks(ctx context.Context, entryID int64, content,
 	resultCh := make(chan TranslateBlockResult)
 	errCh := make(chan error, len(blocks))
 
-	// Start parallel translation under the admitted writer context.
-	if err := s.writerLauncher.LaunchWriter(ctx, WriterRequestBound, func(ctx context.Context) {
+	// Reserve before publishing streaming channels to the caller.
+	reservation, err := s.writerLauncher.ReserveWriter(ctx, WriterRequestBound)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("reserve translation writer: %w", err)
+	}
+	reservation.Launch(func(ctx context.Context) {
 		defer close(resultCh)
 		defer close(errCh)
 
@@ -437,9 +441,7 @@ func (s *aiService) TranslateBlocks(ctx context.Context, entryID int64, content,
 
 		}
 
-	}); err != nil {
-		return nil, nil, nil, fmt.Errorf("launch translation writer: %w", err)
-	}
+	})
 
 	return blockInfos, resultCh, errCh, nil
 }
@@ -497,7 +499,11 @@ func (s *aiService) TranslateBatch(ctx context.Context, articles []BatchArticleI
 	resultCh := make(chan BatchTranslateResult)
 	errCh := make(chan error, len(articles))
 
-	if err := s.writerLauncher.LaunchWriter(ctx, WriterRequestBound, func(ctx context.Context) {
+	reservation, err := s.writerLauncher.ReserveWriter(ctx, WriterRequestBound)
+	if err != nil {
+		return nil, nil, fmt.Errorf("reserve batch translation writer: %w", err)
+	}
+	reservation.Launch(func(ctx context.Context) {
 		defer close(resultCh)
 		defer close(errCh)
 
@@ -630,9 +636,7 @@ func (s *aiService) TranslateBatch(ctx context.Context, articles []BatchArticleI
 		}
 
 		wg.Wait()
-	}); err != nil {
-		return nil, nil, fmt.Errorf("launch batch translation writer: %w", err)
-	}
+	})
 
 	return resultCh, errCh, nil
 }

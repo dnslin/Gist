@@ -9,10 +9,31 @@ import (
 	"gist/backend/pkg/logger"
 )
 
+type Timer interface {
+	C() <-chan time.Time
+	Stop() bool
+	Reset(time.Duration) bool
+}
+
+type Clock interface {
+	NewTimer(time.Duration) Timer
+}
+
+type realClock struct{}
+
+func (realClock) NewTimer(duration time.Duration) Timer {
+	return realTimer{Timer: time.NewTimer(duration)}
+}
+
+type realTimer struct{ *time.Timer }
+
+func (t realTimer) C() <-chan time.Time { return t.Timer.C }
+
 type Scheduler struct {
 	refreshService service.RefreshService
 	interval       time.Duration
 	writerLauncher service.WriterLauncher
+	clock          Clock
 	ctx            context.Context
 	cancel         context.CancelFunc
 	stopCh         chan struct{}
@@ -20,12 +41,17 @@ type Scheduler struct {
 	wg             sync.WaitGroup
 }
 
-func New(refreshService service.RefreshService, interval time.Duration, writerLauncher service.WriterLauncher) *Scheduler {
+func New(refreshService service.RefreshService, interval time.Duration, writerLauncher service.WriterLauncher, clocks ...Clock) *Scheduler {
+	clock := Clock(realClock{})
+	if len(clocks) != 0 && clocks[0] != nil {
+		clock = clocks[0]
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Scheduler{
 		refreshService: refreshService,
 		interval:       interval,
 		writerLauncher: writerLauncher,
+		clock:          clock,
 		ctx:            ctx,
 		cancel:         cancel,
 		stopCh:         make(chan struct{}),
@@ -53,13 +79,14 @@ func (s *Scheduler) run() {
 	// Run immediately on start.
 	s.refresh()
 
-	ticker := time.NewTicker(s.interval)
-	defer ticker.Stop()
+	timer := s.clock.NewTimer(s.interval)
+	defer timer.Stop()
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-timer.C():
 			s.refresh()
+			timer.Reset(s.interval)
 		case <-s.stopCh:
 			return
 		}
@@ -71,7 +98,12 @@ func (s *Scheduler) refresh() {
 	defer cancel()
 
 	done := make(chan struct{})
-	err := s.writerLauncher.LaunchWriter(ctx, service.WriterBackground, func(writerCtx context.Context) {
+	reservation, err := s.writerLauncher.ReserveWriter(ctx, service.WriterBackground)
+	if err != nil {
+		logger.Warn("scheduled refresh admission rejected", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "rejected", "error", err)
+		return
+	}
+	reservation.Launch(func(writerCtx context.Context) {
 		defer close(done)
 		logger.Info("scheduled feed refresh started", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "ok")
 		if err := s.refreshService.RefreshAll(writerCtx); err != nil {
@@ -84,9 +116,5 @@ func (s *Scheduler) refresh() {
 		}
 		logger.Info("scheduled feed refresh completed", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "ok")
 	})
-	if err != nil {
-		logger.Warn("scheduled refresh admission rejected", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "rejected", "error", err)
-		return
-	}
 	<-done
 }

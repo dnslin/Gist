@@ -15,24 +15,42 @@ No compatibility shim, package-global generator, second composition root, or sec
 
 ## Isolated rollback drill
 
-An isolated Git worktree was created at predecessor commit `9c6c37a` (Child 01 baseline).
+An isolated detached worktree was created at predecessor commit `9c6c37a` (`origin/main`, Child 01 baseline).
 
 Rollback baseline:
 
 ```text
-go test ./internal/http ./cmd/server
-PASS: 1 package, 1 package with no tests (artifact://154)
+go test ./internal/http ./internal/service ./cmd/server -count=1
+PASS: 2 packages passed, 1 package had no tests (artifact://160)
 ```
 
-The active Child 02 worktree was then verified after reapplication/restoration:
+The complete `origin/main -> current working tree` binary diff was then applied to the isolated worktree, including the new host and Runtime fixture files.
+
+Reapplied validation:
 
 ```text
-go test ./internal/application ./internal/http ./cmd/server
-PASS: 2 packages, 1 package with no tests (artifact://156)
+go test ./internal/application ./internal/http ./internal/handler ./internal/service ./internal/scheduler ./cmd/server -count=1
+PASS: 6 packages passed (artifact://164)
 ```
 
-The temporary worktree was removed after verification. A prior stash-based drill was interrupted by Windows console signal delivery; the stash was immediately restored and dropped, and `git status` confirmed all 36 modified plus 6 untracked delivery paths were recovered before the isolated-worktree drill above.
+Residue inspection after reapplication:
+
+```text
+snowflake.(Init|NextID)(...) under backend
+NO MATCHES
+
+LaunchWriter(...) under backend
+NO MATCHES
+
+repository/service/router composition constructors under backend/cmd
+NO MATCHES
+
+git diff --name-only origin/main -- backend/internal/db
+NO OUTPUT
+```
+
+The temporary worktree and binary patch were removed after verification. The active working tree was never reset, stashed, or modified by the drill.
 
 ## Result
 
-Both predecessor and Child 02 focused server/router baselines pass. Rollback requires reverting the complete Child 02 change set; no data recovery or follow-up child is required.
+The predecessor baseline and the complete reapplied Child 02 plus review fixes both pass their focused contracts. Reapplication leaves no package-global generator API, legacy writer launch path, duplicate server composition root, schema/migration change, or data-conversion residue. Rollback remains code-only; no data recovery or follow-up child is required.

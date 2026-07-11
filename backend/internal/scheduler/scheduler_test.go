@@ -7,82 +7,125 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/mock/gomock"
 
 	"gist/backend/internal/scheduler"
 	"gist/backend/internal/service"
-	"gist/backend/internal/service/mock"
 )
+
+type fakeClock struct {
+	created chan *fakeTimer
+}
+
+func newFakeClock() *fakeClock { return &fakeClock{created: make(chan *fakeTimer, 1)} }
+
+func (c *fakeClock) NewTimer(time.Duration) scheduler.Timer {
+	timer := &fakeTimer{ticks: make(chan time.Time, 1)}
+	c.created <- timer
+	return timer
+}
+
+type fakeTimer struct {
+	ticks chan time.Time
+}
+
+func (t *fakeTimer) C() <-chan time.Time      { return t.ticks }
+func (t *fakeTimer) Stop() bool               { return true }
+func (t *fakeTimer) Reset(time.Duration) bool { return true }
+func (t *fakeTimer) fire()                    { t.ticks <- time.Time{} }
+
+type recordingRefresh struct {
+	calls chan context.Context
+	run   func(context.Context) error
+}
+
+func (r *recordingRefresh) RefreshAll(ctx context.Context) error {
+	r.calls <- ctx
+	if r.run != nil {
+		return r.run(ctx)
+	}
+	return nil
+}
+
+func (r *recordingRefresh) RefreshFeed(context.Context, int64) error    { return nil }
+func (r *recordingRefresh) RefreshFeeds(context.Context, []int64) error { return nil }
+func (r *recordingRefresh) IsRefreshing() bool                          { return false }
+func (r *recordingRefresh) GetRefreshStatus() service.RefreshStatus     { return service.RefreshStatus{} }
 
 type recordingLauncher struct {
 	mu      sync.Mutex
 	classes []service.WriterClass
 }
 
-func (l *recordingLauncher) LaunchWriter(ctx context.Context, class service.WriterClass, run func(context.Context)) error {
+func (l *recordingLauncher) ReserveWriter(ctx context.Context, class service.WriterClass) (service.WriterReservation, error) {
 	l.mu.Lock()
 	l.classes = append(l.classes, class)
 	l.mu.Unlock()
-	go run(ctx)
-	return nil
+	return &recordingReservation{ctx: ctx}, nil
 }
 
-func (l *recordingLauncher) count() int {
+type recordingReservation struct{ ctx context.Context }
+
+func (r *recordingReservation) Context() context.Context         { return r.ctx }
+func (r *recordingReservation) Publish()                         {}
+func (r *recordingReservation) Launch(run func(context.Context)) { go run(r.ctx) }
+func (r *recordingReservation) Release()                         {}
+
+func (l *recordingLauncher) snapshot() []service.WriterClass {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return len(l.classes)
+	return append([]service.WriterClass(nil), l.classes...)
 }
 
-func TestScheduler_ImmediateAndPeriodicRefreshRegistered(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockRefresh := mock.NewMockRefreshService(ctrl)
-	calls := make(chan struct{}, 4)
-	mockRefresh.EXPECT().RefreshAll(gomock.Any()).DoAndReturn(func(context.Context) error {
-		calls <- struct{}{}
-		return nil
-	}).AnyTimes()
-
+func TestSchedulerRunsImmediatelyAndOnControlledPeriodicTicks(t *testing.T) {
+	clock := newFakeClock()
+	refresh := &recordingRefresh{calls: make(chan context.Context, 3)}
 	launcher := &recordingLauncher{}
-	s := scheduler.New(mockRefresh, 20*time.Millisecond, launcher)
+	s := scheduler.New(refresh, time.Minute, launcher, clock)
 	s.Start()
-	defer s.Stop()
-
-	for range 2 {
-		select {
-		case <-calls:
-		case <-time.After(300 * time.Millisecond):
-			t.Fatal("expected immediate and periodic refresh")
-		}
-	}
-
-	require.GreaterOrEqual(t, launcher.count(), 2)
-	launcher.mu.Lock()
-	defer launcher.mu.Unlock()
-	for _, class := range launcher.classes {
-		require.Equal(t, service.WriterBackground, class)
-	}
+	<-refresh.calls
+	timer := <-clock.created
+	timer.fire()
+	<-refresh.calls
+	timer.fire()
+	<-refresh.calls
+	s.Stop()
+	require.Equal(t, []service.WriterClass{
+		service.WriterBackground,
+		service.WriterBackground,
+		service.WriterBackground,
+	}, launcher.snapshot())
 }
 
-func TestScheduler_StopCancelsAndWaitsForRefresh(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	mockRefresh := mock.NewMockRefreshService(ctrl)
+func TestSchedulerStopCancelsAndWaitsForCurrentRefresh(t *testing.T) {
+	clock := newFakeClock()
 	started := make(chan struct{})
+	release := make(chan struct{})
 	finished := make(chan struct{})
-	mockRefresh.EXPECT().RefreshAll(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
-		close(started)
-		<-ctx.Done()
-		close(finished)
-		return ctx.Err()
-	})
-
-	s := scheduler.New(mockRefresh, time.Hour, &recordingLauncher{})
+	refresh := &recordingRefresh{
+		calls: make(chan context.Context, 1),
+		run: func(ctx context.Context) error {
+			close(started)
+			<-ctx.Done()
+			<-release
+			close(finished)
+			return ctx.Err()
+		},
+	}
+	s := scheduler.New(refresh, time.Minute, &recordingLauncher{}, clock)
 	s.Start()
 	<-started
-	s.Stop()
 
+	stopped := make(chan struct{})
+	go func() {
+		s.Stop()
+		close(stopped)
+	}()
 	select {
-	case <-finished:
-	case <-time.After(300 * time.Millisecond):
-		t.Fatal("Stop returned before refresh observed cancellation")
+	case <-stopped:
+		t.Fatal("Stop returned while the current refresh was still running")
+	case <-refresh.calls:
 	}
+	close(release)
+	<-stopped
+	<-finished
 }

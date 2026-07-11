@@ -9,33 +9,43 @@
 
 ## Shutdown
 
-SIGINT and SIGTERM enter the same host shutdown path:
+SIGINT and SIGTERM enter the same tested host shutdown runner:
 
-1. fixed 10-second total deadline
-2. 8-second concurrent Echo drain, pprof shutdown, and Runtime quiesce
-3. Runtime writer admission closes immediately; background writers cancel; request-bound streams may drain until deadline
-4. remaining time closes services and SQLite last
-5. main waits for shutdown completion before reporting server stopped
+1. one fixed 10-second overall context
+2. an 8-second concurrent Echo drain, pprof shutdown, and Runtime quiesce
+3. writer admission closes immediately; background writers cancel while accepted request-bound writers drain
+4. drain expiry force-closes HTTP and pprof, then waits for tracked handlers to exit before Runtime close begins
+5. the remaining overall budget closes Runtime services and SQLite last
 
-Runtime lifecycle tests cover retryable deadlines, idempotent close, writer quieting, scheduler stop, and DB-last close.
+`cmd/server` tests inject short deterministic budgets and cover SIGINT/SIGTERM with pprof enabled and disabled. The forced-drain test failed before the fix with `runtime close began before HTTP handler exited`, then passed 20 consecutive runs after the fix. Listener bind failure is returned without a new `os.Exit(1)` path.
+
+Runtime tests cover per-build-stage reverse cleanup with zero activation, controlled scheduler time, concurrent/idempotent Quiesce and Close, retry after caller deadline, writer quieting, and DB-last close.
 
 ## Verification
 
 ```text
-go test ./cmd/server ./internal/application ./internal/http ./internal/service ./internal/handler ./internal/scheduler
-PASS (artifact://89)
+go test ./cmd/server -run TestShutdownRunnerForcesHTTPHandlersBeforeRuntimeClose -count=20
+PASS (artifact://153)
 
-go test ./...
-15 packages passed, 8 packages had no tests (artifact://140)
+go test ./internal/application ./internal/service ./internal/scheduler ./internal/handler ./internal/http -count=1
+PASS (artifact://117)
+
+go test ./... -count=1
+16 packages passed, 7 packages had no tests (artifact://155)
 
 go vet ./...
 PASS, no output
 
-go test -tags=integration ./internal/service
-PASS (artifact://141)
+go build -v ./...
+PASS
+
+go test -tags=integration ./internal/service -count=1
+PASS (artifact://154)
 ```
 
-A real temporary-data server smoke reached `GET /api/auth/status` with HTTP 200 and body `{"exists":false}` and created the expected SQLite database. Windows `SIGTERM` maps to forced process termination in the local Python subprocess API, and targeted console-control delivery was unavailable; graceful signal behavior is therefore defended by the shared shutdown path and focused lifecycle tests, while Linux process-signal smoke remains CI-required.
+`TestServerDependenciesExcludeDesktopAndWindowsHosts` runs `GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go list -deps .` and rejects Wails, `internal/desktop`, and `golang.org/x/sys/windows` dependencies.
+
+The Windows workstation cannot target a real process with graceful SIGINT/SIGTERM using the available subprocess API. The same injected runner is covered for both signals locally; Linux process-signal smoke remains a CI requirement.
 
 ## Web/PWA regression
 
@@ -47,10 +57,10 @@ bun --cwd frontend run lint
 PASS
 
 bun --cwd frontend run build
-PASS; Vite production build and PWA generated 57 precache entries (artifact://98)
+PASS; Vite production build and PWA generated 57 precache entries (artifact://143)
 
 bun test scripts/version.test.ts
-18 tests passed (artifact://96)
+18 tests passed (artifact://141)
 ```
 
-No frontend source, API DTO, schema, migration, route contract, server environment variable, Dockerfile, or workflow was changed.
+No frontend source or DTO, schema, migration, server environment variable, Dockerfile, or workflow changed. The OPML route set and success/error runtime behavior remain unchanged; its Swagger source and generated artifacts now explicitly document the existing admission-failure HTTP 500 response.
