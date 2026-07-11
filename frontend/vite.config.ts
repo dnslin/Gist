@@ -3,9 +3,19 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
+import { checkProductVersion } from "../scripts/version";
+
+const repositoryRoot = path.resolve(__dirname, "..");
+const productVersion = checkProductVersion({
+  root: repositoryRoot,
+  viteVersion: process.env.GIST_PRODUCT_VERSION,
+});
 
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    __GIST_VERSION__: JSON.stringify(productVersion),
+  },
   plugins: [
     react(),
     tailwindcss(),

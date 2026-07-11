@@ -83,6 +83,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Validate release version
+        id: version
+        run: |
+          VERSION="$(bun scripts/version.ts --tag "$GITHUB_REF_NAME")"
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -99,22 +110,42 @@ jobs:
           IMAGE_NAME_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "image_name=${IMAGE_NAME_LOWER}" >> $GITHUB_OUTPUT
 
-      - name: Build and push by digest
-        id: build
+      - name: Build image for verification
         uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/Dockerfile
           platforms: ${{ matrix.platform }}
+          build-args: VERSION=${{ steps.version.outputs.value }}
+          tags: ${{ env.REGISTRY }}/${{ steps.meta.outputs.image_name }}:verify-${{ github.sha }}-${{ matrix.arch }}
+          load: true
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ steps.meta.outputs.image_name }}:buildcache-${{ matrix.arch }}
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ steps.meta.outputs.image_name }}:buildcache-${{ matrix.arch }},mode=max
-          outputs: type=image,name=${{ env.REGISTRY }}/${{ steps.meta.outputs.image_name }},push-by-digest=true,name-canonical=true,push=true
 
-      - name: Export digest
+      - name: Verify and push image
         run: |
+          IMAGE="${{ env.REGISTRY }}/${{ steps.meta.outputs.image_name }}:verify-${{ github.sha }}-${{ matrix.arch }}"
+          VERSION="${{ steps.version.outputs.value }}"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' "$IMAGE")" = "$VERSION"
+          docker run -d --name gist-smoke -p 127.0.0.1:18080:8080 "$IMAGE"
+          trap 'docker rm -f gist-smoke >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/api/auth/status >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 1
+          done
+          test "${ready:-false}" = "true"
+          docker top gist-smoke -eo user,comm | grep -E '^gist[[:space:]]+gist-server$'
+          docker rm -f gist-smoke
+          trap - EXIT
+          docker push "$IMAGE"
+          DIGEST_REF="$(docker image inspect --format '{{ index .RepoDigests 0 }}' "$IMAGE")"
+          DIGEST="${DIGEST_REF#*@}"
           mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
 
       - name: Upload digest
         uses: actions/upload-artifact@v7
@@ -134,6 +165,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Validate release version
+        id: validated-version
+        run: |
+          VERSION="$(bun scripts/version.ts --tag "$GITHUB_REF_NAME")"
+          echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Download digests
         uses: actions/download-artifact@v8
@@ -155,7 +197,7 @@ jobs:
       - name: Extract version from tag
         id: version
         run: |
-          VERSION=${GITHUB_REF_NAME#v}
+          VERSION=${{ steps.validated-version.outputs.value }}
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MINOR=$(echo "$VERSION" | cut -d. -f1-2)
           IMAGE_NAME_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')

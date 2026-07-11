@@ -19,6 +19,11 @@ func IsValidIconPathForTest(iconPath string) bool {
 	return isValidIconPath(iconPath)
 }
 
+// IconFilenameForTest exposes portable favicon filename generation for tests.
+func IconFilenameForTest(siteURL, ext string) string {
+	return iconFilename(siteURL, ext)
+}
+
 // DetectImageFormatExtForTest exposes image format detection for tests.
 func DetectImageFormatExtForTest(data []byte) (string, error) {
 	format, err := detectImageFormat(data)

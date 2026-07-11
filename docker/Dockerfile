@@ -1,21 +1,33 @@
 # Stage 1: Frontend Builder
 FROM oven/bun:1.3.14 AS frontend-builder
+ARG VERSION
+ENV GIST_PRODUCT_VERSION=${VERSION}
 WORKDIR /app/frontend
+COPY VERSION /app/VERSION
+COPY scripts/version.ts /app/scripts/version.ts
+COPY backend/cmd/server/main.go /app/backend/cmd/server/main.go
+COPY backend/internal/config/config.go /app/backend/internal/config/config.go
+COPY backend/docs/ /app/backend/docs/
 COPY frontend/package.json frontend/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY frontend/ ./
+RUN test -n "$VERSION"
 RUN bun run build
 
 # Stage 2: Backend Builder
 FROM golang:1.26.3 AS backend-builder
+ARG VERSION
 WORKDIR /app/backend
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 COPY backend/ ./
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -v -o gist-server ./cmd/server/main.go
+RUN test -n "$VERSION"
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X gist/backend/internal/config.AppVersion=${VERSION}" -v -o gist-server ./cmd/server/main.go
 
 # Stage 3: Final Image
 FROM alpine:latest
+ARG VERSION
+LABEL org.opencontainers.image.version=${VERSION}
 WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata su-exec \
     && addgroup -g 1000 -S gist \

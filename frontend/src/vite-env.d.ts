@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+declare const __GIST_VERSION__: string;
+
 interface Window {
   __GIST_BOOT_READY__?: boolean;
 }

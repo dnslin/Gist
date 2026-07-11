@@ -3,28 +3,31 @@ package config_test
 import (
 	"gist/backend/internal/config"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
+func TestGistUserAgent_DerivesAppVersion(t *testing.T) {
+	require.Equal(
+		t,
+		"Mozilla/5.0 (compatible; Gist/"+config.AppVersion+"; +"+config.AppRepo+")",
+		config.GistUserAgent,
+	)
+	require.Equal(t, config.GistUserAgent, config.DefaultUserAgent)
+}
 func TestLoad(t *testing.T) {
-	// Set env vars
-	os.Setenv("GIST_ADDR", ":9999")
-	os.Setenv("GIST_DATA_DIR", "/tmp/gist")
-	os.Setenv("GIST_LOG_LEVEL", "debug")
-	os.Setenv("GIST_PPROF_ADDR", "127.0.0.1:6060")
-	defer func() {
-		os.Unsetenv("GIST_ADDR")
-		os.Unsetenv("GIST_DATA_DIR")
-		os.Unsetenv("GIST_LOG_LEVEL")
-		os.Unsetenv("GIST_PPROF_ADDR")
-	}()
+	dataDir := t.TempDir()
+	t.Setenv("GIST_ADDR", ":9999")
+	t.Setenv("GIST_DATA_DIR", dataDir)
+	t.Setenv("GIST_LOG_LEVEL", "debug")
+	t.Setenv("GIST_PPROF_ADDR", "127.0.0.1:6060")
 
 	cfg := config.Load()
 	require.Equal(t, ":9999", cfg.Addr)
-	require.Equal(t, "/tmp/gist", cfg.DataDir)
-	require.Contains(t, cfg.DBPath, "/tmp/gist/gist.db")
+	require.Equal(t, filepath.Clean(dataDir), cfg.DataDir)
+	require.Equal(t, filepath.Join(dataDir, "gist.db"), cfg.DBPath)
 	require.Equal(t, "debug", cfg.LogLevel)
 	require.Equal(t, "127.0.0.1:6060", cfg.PprofAddr)
 }

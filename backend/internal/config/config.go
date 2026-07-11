@@ -6,10 +6,12 @@ import (
 )
 
 const (
-	AppName    = "Gist"
-	AppVersion = "1.2.0"
-	AppRepo    = "https://github.com/9bingyin/Gist"
+	AppName = "Gist"
+	AppRepo = "https://github.com/9bingyin/Gist"
 )
+
+// AppVersion is replaced by release builds through Go linker -X.
+var AppVersion = "1.2.0"
 
 // GistUserAgent identifies as Gist RSS reader
 var GistUserAgent = "Mozilla/5.0 (compatible; " + AppName + "/" + AppVersion + "; +" + AppRepo + ")"

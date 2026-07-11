@@ -6,12 +6,18 @@ on:
       - main
     paths:
       - "backend/**"
+      - "VERSION"
+      - "scripts/version.ts"
+      - "frontend/package.json"
       - ".github/workflows/backend-test.yml"
   pull_request:
     branches:
       - main
     paths:
       - "backend/**"
+      - "VERSION"
+      - "scripts/version.ts"
+      - "frontend/package.json"
       - ".github/workflows/backend-test.yml"
   workflow_dispatch:
 
@@ -30,6 +36,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Validate product version
+        working-directory: .
+        run: bun scripts/version.ts
 
       - name: Set up Go
         uses: actions/setup-go@v6

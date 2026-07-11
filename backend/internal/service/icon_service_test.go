@@ -127,10 +127,37 @@ func pngBytes(t *testing.T, width, height int) []byte {
 }
 
 func TestIconService_IsValidIconPath(t *testing.T) {
-	require.False(t, service.IsValidIconPathForTest(""))
-	require.False(t, service.IsValidIconPathForTest("../icon.png"))
-	require.False(t, service.IsValidIconPathForTest("/abs/icon.png"))
-	require.True(t, service.IsValidIconPathForTest("example.com.png"))
+	tests := []struct {
+		name     string
+		iconPath string
+		valid    bool
+	}{
+		{name: "safe filename", iconPath: "example.com.png", valid: true},
+		{name: "empty", iconPath: "", valid: false},
+		{name: "current directory", iconPath: ".", valid: false},
+		{name: "parent directory", iconPath: "..", valid: false},
+		{name: "posix parent escape", iconPath: "../icon.png", valid: false},
+		{name: "windows parent escape", iconPath: `..\icon.png`, valid: false},
+		{name: "posix absolute", iconPath: "/abs/icon.png", valid: false},
+		{name: "windows drive absolute", iconPath: `C:\icons\icon.png`, valid: false},
+		{name: "windows drive with slash", iconPath: "C:/icons/icon.png", valid: false},
+		{name: "unc absolute", iconPath: `\\server\share\icon.png`, valid: false},
+		{name: "device absolute", iconPath: `\\?\C:\icons\icon.png`, valid: false},
+		{name: "mixed separator escape", iconPath: `safe/..\icon.png`, valid: false},
+		{name: "nested relative", iconPath: "icons/icon.png", valid: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.valid, service.IsValidIconPathForTest(tt.iconPath))
+		})
+	}
+}
+
+func TestIconService_IconFilename(t *testing.T) {
+	require.Equal(t, "example.com.png", service.IconFilenameForTest("https://example.com/feed", "png"))
+	require.Equal(t, "ipv6-3a3a31.png", service.IconFilenameForTest("http://[::1]/feed", ".png"))
+	require.True(t, service.IsValidIconPathForTest(service.IconFilenameForTest("http://[::1]/feed", ".png")))
 }
 
 func TestIconService_IsHashFilename(t *testing.T) {

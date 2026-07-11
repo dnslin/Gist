@@ -6,12 +6,20 @@ on:
       - main
     paths:
       - "frontend/**"
+      - "VERSION"
+      - "scripts/**"
+      - "backend/cmd/server/main.go"
+      - "backend/docs/**"
       - ".github/workflows/frontend-test.yml"
   pull_request:
     branches:
       - main
     paths:
       - "frontend/**"
+      - "VERSION"
+      - "scripts/**"
+      - "backend/cmd/server/main.go"
+      - "backend/docs/**"
       - ".github/workflows/frontend-test.yml"
   workflow_dispatch:
 
@@ -35,6 +43,10 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Test version validation
+        working-directory: .
+        run: bun test scripts/version.test.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

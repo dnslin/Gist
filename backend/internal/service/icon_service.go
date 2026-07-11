@@ -281,18 +281,13 @@ func isHashFilename(filename string) bool {
 	return true
 }
 
-// isValidIconPath checks if the icon path is safe (no absolute path or parent directory reference)
+// isValidIconPath only accepts a single portable filename. Icon paths are persisted
+// and may be read on a different OS, so host-native filepath rules are insufficient.
 func isValidIconPath(iconPath string) bool {
-	if iconPath == "" {
+	if iconPath == "" || iconPath == "." || iconPath == ".." {
 		return false
 	}
-	cleaned := filepath.Clean(iconPath)
-	// Reject absolute paths
-	if filepath.IsAbs(cleaned) {
-		return false
-	}
-	// Reject paths that try to escape (start with .. or contain ../)
-	if strings.HasPrefix(cleaned, "..") {
+	if strings.ContainsAny(iconPath, `/\\:`) {
 		return false
 	}
 	return true
@@ -504,7 +499,11 @@ func iconFilename(siteURL, ext string) string {
 	}
 
 	parsed, err := url.Parse(siteURL)
-	if err != nil || parsed.Hostname() == "" {
+	if err != nil {
+		return ""
+	}
+	hostname := parsed.Hostname()
+	if hostname == "" {
 		return ""
 	}
 
@@ -518,8 +517,14 @@ func iconFilename(siteURL, ext string) string {
 		ext = "." + ext
 	}
 
-	// Clean to prevent path traversal
-	return filepath.Clean(parsed.Hostname()) + ext
+	if strings.Contains(hostname, ":") {
+		hostname = "ipv6-" + hex.EncodeToString([]byte(hostname))
+	}
+	filename := hostname + ext
+	if !isValidIconPath(filename) {
+		return ""
+	}
+	return filename
 }
 
 // iconDownloadResult holds the downloaded icon data and format info
