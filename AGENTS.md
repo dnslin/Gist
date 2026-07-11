@@ -23,4 +23,4 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 .rules
 
 
-you have to call me dnslin
+you have to call me dnslin You use Chinese to communicate with me and you use English to think.
