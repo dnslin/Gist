@@ -1,0 +1,12 @@
+{"file":".trellis/spec/backend/index.md","reason":"Backend guideline entry point for Go configuration, cross-platform path safety, generated Swagger artifacts, Docker/server quality gates, and focused test conventions."}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Defines the existing server composition root and config/package ownership that version injection must preserve without Runtime extraction."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Defines Windows/Linux Go test practices, API/Swagger generation contract, observable tests, and existing CI commands used by this child."}
+{"file":".trellis/spec/frontend/index.md","reason":"Frontend guideline entry point for the existing Vite React application and Web/PWA compatibility boundary."}
+{"file":".trellis/spec/frontend/directory-structure.md","reason":"Locates Vite configuration and frontend package boundaries without introducing a desktop entry or second frontend architecture."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Requires Bun commands and records the existing frontend build/test CI surface that version injection must preserve."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Single-source guidance for eliminating repeated product version constants and searching every existing consumer before modification."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Cross-layer contract guidance for one VERSION value flowing through Go, Vite, Swagger, Docker, CI, and future consumers."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/prd.md","reason":"Authoritative parent requirements and AC-PROD-01/17/20 boundaries inherited by Child 01 without claiming later installer or signing completion."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/design.md","reason":"Authoritative DES-08 unified release decision: root VERSION, exact consumer injection, failure-close release behavior, and future compatibility/NSIS boundaries."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/implement.md","reason":"Authoritative Child 01 scope, focused validation categories, E-C01 evidence slots, rollback point, and prohibition on introducing Wails."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/current-project-baseline.md","reason":"Observed pre-Wails Windows failures plus the passing frontend and existing Web/server/Docker compatibility baseline that must be reproduced and preserved."}

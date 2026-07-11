@@ -1,0 +1,13 @@
+{"file":".trellis/spec/backend/index.md","reason":"Select backend review checklists for path safety, Go version injection, generated API metadata, Docker/server regressions, and test quality."}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Verify focused and race tests, public observable contracts, Swagger regeneration, and CI-equivalent backend evidence."}
+{"file":".trellis/spec/frontend/index.md","reason":"Select the frontend review surface for preserving the existing Vite Web/PWA product while injecting build metadata."}
+{"file":".trellis/spec/frontend/quality-guidelines.md","reason":"Verify Bun-only frontend build/test evidence and ensure package/version changes do not weaken existing CI gates."}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Audit that VERSION is the only maintained product version source and no copied constants or fallback truths remain."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Audit end-to-end value flow and failure behavior across VERSION, Go, Vite, package metadata, Swagger, Docker, Tag, compatibility, and later NSIS boundaries."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/prd.md","reason":"Review Child evidence against inherited AC-PROD-01/17/20 scope while ensuring installer/signing acceptance remains owned by later children."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/design.md","reason":"Confirm the implemented version flow matches DES-08 and does not invent Wails, compatibility endpoint, launcher, or NSIS components."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/implement.md","reason":"Audit exact Child 01 scope, real E-C01 slots, focused validation categories, and whole-change rollback contract."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/current-project-baseline.md","reason":"Compare Windows failure reproduction and Web/server/Docker/frontend results with the recorded migration-before-Wails baseline."}
+{"file":".trellis/tasks/07-11-wails3-01-windows-baseline-version/prd.md","reason":"Verify every child requirement and AC is satisfied without scope expansion, skips, or premature closure of parent product ACs."}
+{"file":".trellis/tasks/07-11-wails3-01-windows-baseline-version/design.md","reason":"Review path contracts, single-source data flow, future-consumer boundaries, negative matrix, compatibility invariants, and rollback design."}
+{"file":".trellis/tasks/07-11-wails3-01-windows-baseline-version/implement.md","reason":"Check execution ordering, focused commands, evidence mapping, stop conditions, and rollback rehearsal against delivered artifacts."}

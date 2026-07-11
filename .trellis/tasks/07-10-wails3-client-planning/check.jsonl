@@ -1,4 +1,10 @@
-{"file":".trellis/spec/backend/index.md","reason":"Review backend changes against the project layer guidance and linked quality checks."}
-{"file":".trellis/spec/frontend/index.md","reason":"Review frontend changes against the project layer guidance and linked quality checks."}
-{"file":".trellis/tasks/07-10-wails3-client-planning/research/current-project-baseline.md","reason":"Check that Web, Docker, API, database, scheduler, streaming, and existing test baselines remain intact."}
-{"file":".trellis/tasks/07-10-wails3-client-planning/research/wails3-technical-assessment.md","reason":"Check Wails pinning, no-listener architecture, streaming workaround, platform constraints, and NSIS updater boundaries."}
+{"file":".trellis/spec/backend/index.md","reason":"Select the backend checklists needed to review runtime, persistence, lifecycle, security, logging, and quality compliance."}
+{"file":".trellis/spec/frontend/index.md","reason":"Select the frontend checklists needed to review platform abstraction, repository-state isolation, event typing, accessibility, and quality compliance."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/prd.md","reason":"Review delivered behavior against confirmed requirements, stable acceptance IDs, compatibility surfaces, and explicit non-goals."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/design.md","reason":"Review implementation against the authoritative architecture, active/candidate transaction model, generation rules, OperationCoordinator, and feasibility-gate decisions."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/implement.md","reason":"Audit the approved 14-child DAG, dependency/start/rollback gates, and exact AC-to-DES-to-child-to-validation/evidence trace matrix; this curated context identifies required evidence but is not itself a test-evidence ledger."}
+{"file":"docs/adr/0001-use-wails-3-for-production-desktop.md","reason":"Confirm implementation remains within the accepted Wails 3 production desktop decision."}
+{"file":"docs/adr/0002-use-hybrid-transport-for-desktop-streaming.md","reason":"Confirm the hybrid transport, independent feasibility gate, continuous ACK, out-of-order handling, cancellation, and bounded backpressure contracts are satisfied."}
+{"file":"docs/adr/0003-use-versioned-launcher-for-nsis-rollback.md","reason":"Confirm launcher handoff, transaction-scoped rollback, anti-downgrade behavior, and data-format fence are satisfied."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/current-project-baseline.md","reason":"Compare observable Web, PWA, Docker, API, database, scheduler, and streaming behavior with the recorded compatibility baseline."}
+{"file":".trellis/tasks/07-10-wails3-client-planning/research/wails3-technical-assessment.md","reason":"Check pinned dependency tuple and framework assumptions against the recorded primary-source assessment; prototype outputs and executed tests must be supplied separately as evidence."}
