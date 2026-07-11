@@ -38,3 +38,37 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Complete Wails3 Child 01 baseline and versioning
+
+**Date**: 2026-07-12
+**Task**: Complete Wails3 Child 01 baseline and versioning
+**Branch**: `main`
+
+### Summary
+
+Fixed Windows path portability, established root VERSION across Go Vite Swagger Docker and release workflows, added failure-closed validation and evidence, updated executable specs, and archived Child 01.
+
+### Main Changes
+
+- Detailed change bullets were not supplied; see the summary above.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b30373f` | (see git log) |
+| `8fcaad3` | (see git log) |
+
+### Testing
+
+- Validation was not recorded for this session.
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
