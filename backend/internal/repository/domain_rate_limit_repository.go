@@ -20,17 +20,18 @@ type DomainRateLimitRepository interface {
 }
 
 type domainRateLimitRepository struct {
-	db *sql.DB
+	db        *sql.DB
+	generator snowflake.Generator
 }
 
 // NewDomainRateLimitRepository creates a new domain rate limit repository.
-func NewDomainRateLimitRepository(db *sql.DB) DomainRateLimitRepository {
-	return &domainRateLimitRepository{db: db}
+func NewDomainRateLimitRepository(db *sql.DB, generator snowflake.Generator) DomainRateLimitRepository {
+	return &domainRateLimitRepository{db: db, generator: generator}
 }
 
 // Create creates a new domain rate limit.
 func (r *domainRateLimitRepository) Create(ctx context.Context, host string, intervalSeconds int) (*model.DomainRateLimit, error) {
-	id := snowflake.NextID()
+	id := r.generator.NextID()
 	now := time.Now().UTC()
 	nowStr := now.Format(time.RFC3339)
 

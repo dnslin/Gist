@@ -89,17 +89,14 @@ func (s *opmlService) Import(ctx context.Context, reader io.Reader, onProgress f
 
 	}
 
-	// Concurrently refresh newly created feeds and backfill icons
+	// The admitted import writer owns its refresh/backfill tail work.
 	if len(newFeedIDs) > 0 {
-		go func() {
-			bgCtx := context.Background()
-			if s.refreshService != nil {
-				_ = s.refreshService.RefreshFeeds(bgCtx, newFeedIDs)
-			}
-			if s.iconService != nil {
-				_ = s.iconService.BackfillIcons(bgCtx)
-			}
-		}()
+		if s.refreshService != nil {
+			_ = s.refreshService.RefreshFeeds(ctx, newFeedIDs)
+		}
+		if s.iconService != nil && ctx.Err() == nil {
+			_ = s.iconService.BackfillIcons(ctx)
+		}
 	}
 
 	logger.Info("opml import completed", "module", "service", "action", "import", "resource", "opml", "result", "ok", "folders_created", result.FoldersCreated, "folders_skipped", result.FoldersSkipped, "feeds_created", result.FeedsCreated, "feeds_skipped", result.FeedsSkipped)

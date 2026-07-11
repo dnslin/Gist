@@ -17,7 +17,7 @@ import (
 
 func TestAIService_GetSummaryLanguage(t *testing.T) {
 	repo := newSettingsRepoStub()
-	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	lang := svc.GetSummaryLanguage(context.Background())
 	require.Equal(t, "zh-CN", lang, "expected default language")
@@ -33,7 +33,7 @@ func TestAIService_SaveSummaryAndTranslation_UsesLanguage(t *testing.T) {
 
 	summaryRepo := &summaryRepoStub{}
 	translationRepo := &translationRepoStub{}
-	svc := service.NewAIService(summaryRepo, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(summaryRepo, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	err := svc.SaveSummary(context.Background(), 1, false, "summary")
 	require.NoError(t, err, "SaveSummary should not fail")
@@ -48,7 +48,7 @@ func TestAIService_ClearAllCache_ErrorPropagation(t *testing.T) {
 	summaryRepo := &summaryRepoStub{deleteAllErr: errors.New("summary delete failed")}
 	translationRepo := &translationRepoStub{}
 	listRepo := &listTranslationRepoStub{}
-	svc := service.NewAIService(summaryRepo, translationRepo, listRepo, newSettingsRepoStub(), ai.NewRateLimiter(100))
+	svc := service.NewAIService(summaryRepo, translationRepo, listRepo, newSettingsRepoStub(), ai.NewRateLimiter(100), testWriterLauncher{})
 
 	_, _, _, err := svc.ClearAllCache(context.Background())
 	require.Error(t, err, "expected summary clear error")
@@ -69,21 +69,21 @@ func TestAIService_ClearAllCache_ErrorPropagation(t *testing.T) {
 
 func TestAIService_Summarize_MissingConfig(t *testing.T) {
 	repo := newSettingsRepoStub()
-	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	_, _, err := svc.Summarize(context.Background(), 1, "content", "title", false)
 	require.Error(t, err, "expected error for missing config")
 }
 
 func TestAIService_TranslateBlocks_EmptyContent(t *testing.T) {
-	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, newSettingsRepoStub(), ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, newSettingsRepoStub(), ai.NewRateLimiter(100), testWriterLauncher{})
 
 	_, _, _, err := svc.TranslateBlocks(context.Background(), 1, "", "title", false)
 	require.Error(t, err, "expected error for empty content")
 }
 
 func TestAIService_TranslateBatch_EmptyInput(t *testing.T) {
-	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, newSettingsRepoStub(), ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, newSettingsRepoStub(), ai.NewRateLimiter(100), testWriterLauncher{})
 
 	_, _, err := svc.TranslateBatch(context.Background(), nil)
 	require.Error(t, err, "expected error for empty batch")
@@ -92,7 +92,7 @@ func TestAIService_TranslateBatch_EmptyInput(t *testing.T) {
 func TestAIService_GetCachedTranslation_Error(t *testing.T) {
 	repo := newSettingsRepoStub()
 	translationRepo := &translationRepoStub{getErr: errors.New("get failed")}
-	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	_, err := svc.GetCachedTranslation(context.Background(), 1, false)
 	require.Error(t, err)
@@ -101,7 +101,7 @@ func TestAIService_GetCachedTranslation_Error(t *testing.T) {
 func TestAIService_SaveTranslation_Error(t *testing.T) {
 	repo := newSettingsRepoStub()
 	translationRepo := &translationRepoStub{saveErr: errors.New("save failed")}
-	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	err := svc.SaveTranslation(context.Background(), 1, false, "content")
 	require.Error(t, err)
@@ -115,7 +115,7 @@ func TestAIService_TranslateBatch_CacheHit(t *testing.T) {
 			2: {EntryID: 2, Title: "T2", Summary: "S2"},
 		},
 	}
-	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, listRepo, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, listRepo, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	resultCh, errCh, err := svc.TranslateBatch(context.Background(), []service.BatchArticleInput{
 		{ID: "1"},
@@ -144,7 +144,7 @@ func TestAIService_TranslateBatch_CacheHit(t *testing.T) {
 func TestAIService_TranslateBatch_InvalidIDs(t *testing.T) {
 	repo := newSettingsRepoStub()
 	listRepo := &listTranslationRepoStub{batchResult: map[int64]*model.AIListTranslation{}}
-	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, listRepo, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, listRepo, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	resultCh, errCh, err := svc.TranslateBatch(context.Background(), []service.BatchArticleInput{
 		{ID: "not-a-number"},
@@ -270,7 +270,7 @@ func TestAIService_GetCachedSummary_Success(t *testing.T) {
 			Summary:       "Test summary content",
 		},
 	}
-	svc := service.NewAIService(summaryRepo, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(summaryRepo, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	result, err := svc.GetCachedSummary(context.Background(), 123, false)
 	require.NoError(t, err)
@@ -282,7 +282,7 @@ func TestAIService_GetCachedSummary_Success(t *testing.T) {
 func TestAIService_GetCachedSummary_NotFound(t *testing.T) {
 	repo := newSettingsRepoStub()
 	summaryRepo := &summaryRepoStub{getResult: nil}
-	svc := service.NewAIService(summaryRepo, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(summaryRepo, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	result, err := svc.GetCachedSummary(context.Background(), 123, false)
 	require.NoError(t, err)
@@ -292,7 +292,7 @@ func TestAIService_GetCachedSummary_NotFound(t *testing.T) {
 func TestAIService_GetCachedSummary_Error(t *testing.T) {
 	repo := newSettingsRepoStub()
 	summaryRepo := &summaryRepoStub{getErr: errors.New("database error")}
-	svc := service.NewAIService(summaryRepo, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(summaryRepo, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	_, err := svc.GetCachedSummary(context.Background(), 123, false)
 	require.Error(t, err)
@@ -323,6 +323,7 @@ func TestAIService_BuildSummarizeSystemPrompt_UsesFeedReminder(t *testing.T) {
 		ai.NewRateLimiter(100),
 		entryRepo,
 		feedRepo,
+		testWriterLauncher{},
 	)
 
 	prompt := service.BuildAISummarizeSystemPromptForTest(svc, context.Background(), 123, "Title")
@@ -349,6 +350,7 @@ func TestAIService_BuildSummarizeSystemPrompt_FallbackOnFeedLookupError(t *testi
 		ai.NewRateLimiter(100),
 		entryRepo,
 		feedRepo,
+		testWriterLauncher{},
 	)
 
 	prompt := service.BuildAISummarizeSystemPromptForTest(svc, context.Background(), 123, "Title")
@@ -363,7 +365,7 @@ func TestAIService_BuildSummarizeSystemPrompt_FallbackOnFeedLookupError(t *testi
 func TestAIService_TranslateBlocks_ContextCancelled(t *testing.T) {
 	repo := newSettingsRepoStub()
 	translationRepo := &translationRepoStub{}
-	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	// Create a pre-cancelled context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -409,7 +411,7 @@ func TestAIService_TranslateBlocks_ContextCancelledDuringProcessing(t *testing.T
 	repo.data[service.KeyAIModel] = "gpt-4"
 
 	translationRepo := &translationRepoStub{}
-	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	// Create context that will be cancelled
 	ctx, cancel := context.WithCancel(context.Background())
@@ -457,7 +459,7 @@ func TestAIService_TranslateBlocks_ContextCancelledDuringProcessing(t *testing.T
 func TestAIService_TranslateBlocks_NoCacheOnCancel(t *testing.T) {
 	repo := newSettingsRepoStub()
 	translationRepo := &translationRepoStub{}
-	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100))
+	svc := service.NewAIService(&summaryRepoStub{}, translationRepo, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), testWriterLauncher{})
 
 	// Create and immediately cancel context
 	ctx, cancel := context.WithCancel(context.Background())
@@ -480,4 +482,34 @@ func TestAIService_TranslateBlocks_NoCacheOnCancel(t *testing.T) {
 	// Verify no cache was saved (translationRepo.lastLanguage should be empty
 	// because SaveTranslation was never called due to ctx.Err() != nil check)
 	require.Empty(t, translationRepo.lastLanguage, "Should not save cache on cancelled context")
+}
+
+func TestAIService_TranslateBlocks_AdmissionRejected(t *testing.T) {
+	repo := newSettingsRepoStub()
+	repo.data[service.KeyAIProvider] = "openai"
+	repo.data[service.KeyAIAPIKey] = "test-key"
+	repo.data[service.KeyAIModel] = "gpt-4"
+	admissionErr := errors.New("admission closed")
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, &listTranslationRepoStub{}, repo, ai.NewRateLimiter(100), rejectingWriterLauncher{err: admissionErr})
+
+	blocks, results, streamErrs, err := svc.TranslateBlocks(context.Background(), 1, "<p>content</p>", "title", false)
+
+	require.ErrorIs(t, err, admissionErr)
+	require.Nil(t, blocks)
+	require.Nil(t, results)
+	require.Nil(t, streamErrs)
+}
+
+func TestAIService_TranslateBatch_AdmissionRejected(t *testing.T) {
+	listRepo := &listTranslationRepoStub{batchResult: map[int64]*model.AIListTranslation{
+		1: {EntryID: 1, Title: "cached", Summary: "cached"},
+	}}
+	admissionErr := errors.New("admission closed")
+	svc := service.NewAIService(&summaryRepoStub{}, &translationRepoStub{}, listRepo, newSettingsRepoStub(), ai.NewRateLimiter(100), rejectingWriterLauncher{err: admissionErr})
+
+	results, streamErrs, err := svc.TranslateBatch(context.Background(), []service.BatchArticleInput{{ID: "1"}})
+
+	require.ErrorIs(t, err, admissionErr)
+	require.Nil(t, results)
+	require.Nil(t, streamErrs)
 }

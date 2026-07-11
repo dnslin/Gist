@@ -35,6 +35,28 @@ func TestOPMLService_Import_Invalid(t *testing.T) {
 	require.ErrorIs(t, err, service.ErrInvalid)
 }
 
+func TestOPMLService_Import_FollowUpInheritsTaskCancellation(t *testing.T) {
+	started := make(chan struct{})
+	refresh := &refreshServiceStub{started: started, cancelled: make(chan struct{})}
+	svc := service.NewOPMLService(nil, &feedServiceStub{nextID: 1}, refresh, nil, nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := svc.Import(ctx, strings.NewReader(`<?xml version="1.0"?><opml version="2.0"><body><outline text="Feed" xmlUrl="https://example.com/feed"/></body></opml>`), nil)
+		done <- err
+	}()
+	<-started
+	cancel()
+
+	select {
+	case <-refresh.cancelled:
+	case <-time.After(300 * time.Millisecond):
+		t.Fatal("expected follow-up writer to inherit task cancellation")
+	}
+	require.NoError(t, <-done)
+}
+
 func TestOPMLService_Import_CreatesFoldersAndFeeds(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -221,7 +243,9 @@ func (s *feedServiceStub) DeleteBatch(ctx context.Context, ids []int64) error {
 }
 
 type refreshServiceStub struct {
-	done chan []int64
+	done      chan []int64
+	started   chan struct{}
+	cancelled chan struct{}
 }
 
 func (s *refreshServiceStub) RefreshAll(ctx context.Context) error {
@@ -233,6 +257,15 @@ func (s *refreshServiceStub) RefreshFeed(ctx context.Context, feedID int64) erro
 }
 
 func (s *refreshServiceStub) RefreshFeeds(ctx context.Context, feedIDs []int64) error {
+	if s.started != nil {
+		if s.cancelled == nil {
+			s.cancelled = make(chan struct{})
+		}
+		close(s.started)
+		<-ctx.Done()
+		close(s.cancelled)
+		return ctx.Err()
+	}
 	select {
 	case s.done <- append([]int64(nil), feedIDs...):
 	default:

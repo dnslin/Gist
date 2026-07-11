@@ -1,21 +1,56 @@
 package snowflake
 
-import "github.com/bwmarrin/snowflake"
+import (
+	"errors"
+	"fmt"
+	"sync"
 
-var node *snowflake.Node
+	bwmsnowflake "github.com/bwmarrin/snowflake"
+)
 
-// Init initializes the snowflake node with the given node ID.
-// Node ID should be unique across all instances (0-1023).
-func Init(nodeID int64) error {
-	n, err := snowflake.NewNode(nodeID)
-	if err != nil {
-		return err
-	}
-	node = n
-	return nil
+var ErrBootstrapAlreadyInitialized = errors.New("snowflake bootstrap owner already initialized")
+
+type Generator interface {
+	NextID() int64
 }
 
-// NextID generates a new unique snowflake ID.
-func NextID() int64 {
-	return node.Generate().Int64()
+type generator struct {
+	node *bwmsnowflake.Node
+}
+
+func NewGenerator(nodeID int64) (Generator, error) {
+	node, err := bwmsnowflake.NewNode(nodeID)
+	if err != nil {
+		return nil, fmt.Errorf("create snowflake node %d: %w", nodeID, err)
+	}
+	return &generator{node: node}, nil
+}
+
+func (g *generator) NextID() int64 {
+	return g.node.Generate().Int64()
+}
+
+type BootstrapOwner struct {
+	mu          sync.Mutex
+	initialized bool
+}
+
+func NewBootstrapOwner() *BootstrapOwner {
+	return &BootstrapOwner{}
+}
+
+func (o *BootstrapOwner) Init(nodeID int64) (Generator, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	if o.initialized {
+		return nil, ErrBootstrapAlreadyInitialized
+	}
+
+	generator, err := NewGenerator(nodeID)
+	if err != nil {
+		return nil, err
+	}
+	o.initialized = true
+	return generator, nil
 }

@@ -79,6 +79,7 @@ type aiService struct {
 	entryRepo           repository.EntryRepository
 	feedRepo            repository.FeedRepository
 	rateLimiter         *ai.RateLimiter
+	writerLauncher      WriterLauncher
 }
 
 // NewAIService creates a new AI service.
@@ -88,8 +89,9 @@ func NewAIService(
 	listTranslationRepo repository.AIListTranslationRepository,
 	settingsRepo repository.SettingsRepository,
 	rateLimiter *ai.RateLimiter,
+	writerLauncher WriterLauncher,
 ) AIService {
-	return NewAIServiceWithFeedContext(summaryRepo, translationRepo, listTranslationRepo, settingsRepo, rateLimiter, nil, nil)
+	return NewAIServiceWithFeedContext(summaryRepo, translationRepo, listTranslationRepo, settingsRepo, rateLimiter, nil, nil, writerLauncher)
 }
 
 func NewAIServiceWithFeedContext(
@@ -100,6 +102,7 @@ func NewAIServiceWithFeedContext(
 	rateLimiter *ai.RateLimiter,
 	entryRepo repository.EntryRepository,
 	feedRepo repository.FeedRepository,
+	writerLauncher WriterLauncher,
 ) AIService {
 	return &aiService{
 		summaryRepo:         summaryRepo,
@@ -109,6 +112,7 @@ func NewAIServiceWithFeedContext(
 		entryRepo:           entryRepo,
 		feedRepo:            feedRepo,
 		rateLimiter:         rateLimiter,
+		writerLauncher:      writerLauncher,
 	}
 }
 
@@ -306,8 +310,8 @@ func (s *aiService) TranslateBlocks(ctx context.Context, entryID int64, content,
 	resultCh := make(chan TranslateBlockResult)
 	errCh := make(chan error, len(blocks))
 
-	// Start parallel translation
-	go func() {
+	// Start parallel translation under the admitted writer context.
+	if err := s.writerLauncher.LaunchWriter(ctx, WriterRequestBound, func(ctx context.Context) {
 		defer close(resultCh)
 		defer close(errCh)
 
@@ -433,7 +437,9 @@ func (s *aiService) TranslateBlocks(ctx context.Context, entryID int64, content,
 
 		}
 
-	}()
+	}); err != nil {
+		return nil, nil, nil, fmt.Errorf("launch translation writer: %w", err)
+	}
 
 	return blockInfos, resultCh, errCh, nil
 }
@@ -491,7 +497,7 @@ func (s *aiService) TranslateBatch(ctx context.Context, articles []BatchArticleI
 	resultCh := make(chan BatchTranslateResult)
 	errCh := make(chan error, len(articles))
 
-	go func() {
+	if err := s.writerLauncher.LaunchWriter(ctx, WriterRequestBound, func(ctx context.Context) {
 		defer close(resultCh)
 		defer close(errCh)
 
@@ -624,7 +630,9 @@ func (s *aiService) TranslateBatch(ctx context.Context, articles []BatchArticleI
 		}
 
 		wg.Wait()
-	}()
+	}); err != nil {
+		return nil, nil, fmt.Errorf("launch batch translation writer: %w", err)
+	}
 
 	return resultCh, errCh, nil
 }

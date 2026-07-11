@@ -12,16 +12,22 @@ import (
 type Scheduler struct {
 	refreshService service.RefreshService
 	interval       time.Duration
+	writerLauncher service.WriterLauncher
+	ctx            context.Context
+	cancel         context.CancelFunc
 	stopCh         chan struct{}
+	stopOnce       sync.Once
 	wg             sync.WaitGroup
-	cancelFunc     context.CancelFunc // cancels the current refresh operation
-	mu             sync.Mutex         // protects cancelFunc
 }
 
-func New(refreshService service.RefreshService, interval time.Duration) *Scheduler {
+func New(refreshService service.RefreshService, interval time.Duration, writerLauncher service.WriterLauncher) *Scheduler {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Scheduler{
 		refreshService: refreshService,
 		interval:       interval,
+		writerLauncher: writerLauncher,
+		ctx:            ctx,
+		cancel:         cancel,
 		stopCh:         make(chan struct{}),
 	}
 }
@@ -33,14 +39,10 @@ func (s *Scheduler) Start() {
 }
 
 func (s *Scheduler) Stop() {
-	// Cancel any ongoing refresh operation first
-	s.mu.Lock()
-	if s.cancelFunc != nil {
-		s.cancelFunc()
-	}
-	s.mu.Unlock()
-
-	close(s.stopCh)
+	s.stopOnce.Do(func() {
+		s.cancel()
+		close(s.stopCh)
+	})
 	s.wg.Wait()
 	logger.Info("scheduler stopped", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "ok")
 }
@@ -48,7 +50,7 @@ func (s *Scheduler) Stop() {
 func (s *Scheduler) run() {
 	defer s.wg.Done()
 
-	// Run immediately on start
+	// Run immediately on start.
 	s.refresh()
 
 	ticker := time.NewTicker(s.interval)
@@ -65,28 +67,26 @@ func (s *Scheduler) run() {
 }
 
 func (s *Scheduler) refresh() {
-	// Use the same timeout as the refresh interval
-	ctx, cancel := context.WithTimeout(context.Background(), s.interval)
+	ctx, cancel := context.WithTimeout(s.ctx, s.interval)
+	defer cancel()
 
-	// Store cancel function so Stop() can cancel ongoing refresh
-	s.mu.Lock()
-	s.cancelFunc = cancel
-	s.mu.Unlock()
-
-	defer func() {
-		cancel()
-		s.mu.Lock()
-		s.cancelFunc = nil
-		s.mu.Unlock()
-	}()
-
-	logger.Info("scheduled feed refresh started", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "ok")
-	if err := s.refreshService.RefreshAll(ctx); err != nil {
-		if ctx.Err() != nil {
-			logger.Warn("scheduled refresh cancelled", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "cancelled")
+	done := make(chan struct{})
+	err := s.writerLauncher.LaunchWriter(ctx, service.WriterBackground, func(writerCtx context.Context) {
+		defer close(done)
+		logger.Info("scheduled feed refresh started", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "ok")
+		if err := s.refreshService.RefreshAll(writerCtx); err != nil {
+			if writerCtx.Err() != nil {
+				logger.Warn("scheduled refresh cancelled", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "cancelled")
+				return
+			}
+			logger.Error("scheduled refresh failed", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "failed", "error", err)
 			return
 		}
-		logger.Error("scheduled refresh failed", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "failed", "error", err)
+		logger.Info("scheduled feed refresh completed", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "ok")
+	})
+	if err != nil {
+		logger.Warn("scheduled refresh admission rejected", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "rejected", "error", err)
+		return
 	}
-	logger.Info("scheduled feed refresh completed", "module", "scheduler", "action", "refresh", "resource", "feed", "result", "ok")
+	<-done
 }

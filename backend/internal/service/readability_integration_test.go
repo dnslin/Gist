@@ -14,15 +14,9 @@ import (
 	"gist/backend/internal/repository"
 	"gist/backend/internal/service"
 	"gist/backend/pkg/network"
-	"gist/backend/pkg/snowflake"
 
 	"github.com/stretchr/testify/require"
 )
-
-func init() {
-	// Initialize snowflake for integration tests
-	_ = snowflake.Init(1)
-}
 
 // Test URLs for readability extraction
 var testArticles = []struct {
@@ -54,8 +48,8 @@ func TestReadabilityService_Integration_FetchReadableContent(t *testing.T) {
 
 	dbConn := setupReadabilityTestDB(t)
 	clientFactory := network.NewClientFactoryForTest(nil)
-	entryRepo := repository.NewEntryRepository(dbConn)
-	feedRepo := repository.NewFeedRepository(dbConn)
+	entryRepo := repository.NewEntryRepository(dbConn, newIntegrationGenerator(t))
+	feedRepo := repository.NewFeedRepository(dbConn, newIntegrationGenerator(t))
 
 	// Create a feed first
 	feed, err := feedRepo.Create(context.Background(), model.Feed{
@@ -124,8 +118,8 @@ func TestReadabilityService_Integration_CachedContent(t *testing.T) {
 
 	dbConn := setupReadabilityTestDB(t)
 	clientFactory := network.NewClientFactoryForTest(nil)
-	entryRepo := repository.NewEntryRepository(dbConn)
-	feedRepo := repository.NewFeedRepository(dbConn)
+	entryRepo := repository.NewEntryRepository(dbConn, newIntegrationGenerator(t))
+	feedRepo := repository.NewFeedRepository(dbConn, newIntegrationGenerator(t))
 
 	// Create a feed
 	feed, err := feedRepo.Create(context.Background(), model.Feed{

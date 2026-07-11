@@ -16,7 +16,7 @@ import (
 func TestFolderRepository_Create_Success(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	folder, err := repo.Create(ctx, "Tech News", nil, "article")
@@ -32,7 +32,7 @@ func TestFolderRepository_Create_Success(t *testing.T) {
 func TestFolderRepository_Create_WithParent(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	// Create parent folder
@@ -48,7 +48,7 @@ func TestFolderRepository_Create_WithParent(t *testing.T) {
 func TestFolderRepository_Create_DefaultType(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	folder, err := repo.Create(ctx, "Test", nil, "")
@@ -59,7 +59,7 @@ func TestFolderRepository_Create_DefaultType(t *testing.T) {
 func TestFolderRepository_GetByID_Success(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFolder(t, db, "Test Folder", nil, "picture")
@@ -74,7 +74,7 @@ func TestFolderRepository_GetByID_Success(t *testing.T) {
 func TestFolderRepository_GetByID_NotFound(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	_, err := repo.GetByID(ctx, 99999)
@@ -85,7 +85,7 @@ func TestFolderRepository_GetByID_NotFound(t *testing.T) {
 func TestFolderRepository_FindByName_Success(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	parentID := testutil.SeedFolder(t, db, "Parent", nil, "article")
@@ -101,7 +101,7 @@ func TestFolderRepository_FindByName_Success(t *testing.T) {
 func TestFolderRepository_FindByName_NotFound(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	folder, err := repo.FindByName(ctx, "NonExistent", nil)
@@ -112,7 +112,7 @@ func TestFolderRepository_FindByName_NotFound(t *testing.T) {
 func TestFolderRepository_List_Success(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	testutil.SeedFolder(t, db, "Folder A", nil, "article")
@@ -130,7 +130,7 @@ func TestFolderRepository_List_Success(t *testing.T) {
 func TestFolderRepository_Update_Success(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFolder(t, db, "Original Name", nil, "article")
@@ -147,7 +147,7 @@ func TestFolderRepository_Update_Success(t *testing.T) {
 func TestFolderRepository_UpdateType(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFolder(t, db, "Folder", nil, "article")
@@ -163,7 +163,7 @@ func TestFolderRepository_UpdateType(t *testing.T) {
 func TestFolderRepository_Delete_Success(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	id := testutil.SeedFolder(t, db, "To Delete", nil, "article")
@@ -180,7 +180,7 @@ func TestFolderRepository_Delete_Success(t *testing.T) {
 func TestFolderRepository_Delete_CascadeChildren(t *testing.T) {
 	t.Parallel()
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	// Create parent and child
@@ -199,7 +199,7 @@ func TestFolderRepository_Delete_CascadeChildren(t *testing.T) {
 
 func TestFolderRepository_Create_Concurrent(t *testing.T) {
 	db := testutil.NewTestDB(t)
-	repo := repository.NewFolderRepository(db)
+	repo := repository.NewFolderRepository(db, testutil.NewTestGenerator(t))
 	ctx := context.Background()
 
 	const goroutines = 10

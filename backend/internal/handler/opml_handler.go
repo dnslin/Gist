@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,14 +19,16 @@ import (
 const maxOPMLSize = 5 << 20
 
 type OPMLHandler struct {
-	service     service.OPMLService
-	taskManager service.ImportTaskService
+	service        service.OPMLService
+	taskManager    service.ImportTaskService
+	writerLauncher service.WriterLauncher
 }
 
-func NewOPMLHandler(opmlService service.OPMLService, taskManager service.ImportTaskService) *OPMLHandler {
+func NewOPMLHandler(opmlService service.OPMLService, taskManager service.ImportTaskService, writerLauncher service.WriterLauncher) *OPMLHandler {
 	return &OPMLHandler{
-		service:     opmlService,
-		taskManager: taskManager,
+		service:        opmlService,
+		taskManager:    taskManager,
+		writerLauncher: writerLauncher,
 	}
 }
 
@@ -83,13 +86,16 @@ func (h *OPMLHandler) Import(c echo.Context) error {
 	}
 
 	logger.Info("opml import started", "module", "handler", "action", "import", "resource", "opml", "result", "ok", "count", len(content))
-	// Start background import
-	go h.runImport(content)
+	if err := h.writerLauncher.LaunchWriter(context.Background(), service.WriterRequestBound, func(writerCtx context.Context) {
+		h.runImport(writerCtx, content)
+	}); err != nil {
+		return writeServiceError(c, err)
+	}
 
 	return c.JSON(http.StatusOK, importStartedResponse{Status: "started"})
 }
 
-func (h *OPMLHandler) runImport(content []byte) {
+func (h *OPMLHandler) runImport(writerCtx context.Context, content []byte) {
 	reader := bytes.NewReader(content)
 
 	// Pre-count total feeds for progress
@@ -97,7 +103,7 @@ func (h *OPMLHandler) runImport(content []byte) {
 	total := h.countFeedsInOPML(preReader)
 
 	// Start task and get cancellable context
-	_, ctx := h.taskManager.Start(total)
+	_, ctx := h.taskManager.Start(total, writerCtx)
 
 	onProgress := func(p service.ImportProgress) {
 		h.taskManager.Update(p.Current, p.Feed)

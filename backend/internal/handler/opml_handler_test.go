@@ -2,6 +2,7 @@ package handler_test
 
 import (
 	"context"
+	"errors"
 	"gist/backend/internal/handler"
 	"io"
 	"net/http"
@@ -21,7 +22,7 @@ func TestOPMLHandler_Import_Success(t *testing.T) {
 
 	mockOPML := mock.NewMockOPMLService(ctrl)
 	mockTask := mock.NewMockImportTaskService(ctrl)
-	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask)
+	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask, writerLauncherFunc(launchTestWriter))
 
 	e := newTestEcho()
 	opmlContent := `<?xml version="1.0" encoding="UTF-8"?><opml version="2.0"><body><outline text="Test" xmlUrl="http://example.com/rss"/></body></opml>`
@@ -35,7 +36,7 @@ func TestOPMLHandler_Import_Success(t *testing.T) {
 	// We just test the immediate response.
 
 	mockTask.EXPECT().
-		Start(1).
+		Start(1, gomock.Any()).
 		Return("task-id", context.Background())
 
 	mockOPML.EXPECT().
@@ -63,7 +64,7 @@ func TestOPMLHandler_CancelImport_Success(t *testing.T) {
 
 	mockOPML := mock.NewMockOPMLService(ctrl)
 	mockTask := mock.NewMockImportTaskService(ctrl)
-	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask)
+	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask, writerLauncherFunc(launchTestWriter))
 
 	mockTask.EXPECT().Cancel().Return(true)
 
@@ -85,7 +86,7 @@ func TestOPMLHandler_Export_Success(t *testing.T) {
 
 	mockOPML := mock.NewMockOPMLService(ctrl)
 	mockTask := mock.NewMockImportTaskService(ctrl)
-	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask)
+	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask, writerLauncherFunc(launchTestWriter))
 
 	expectedXML := []byte(`<?xml version="1.0"?><opml><body></body></opml>`)
 	mockOPML.EXPECT().
@@ -111,7 +112,7 @@ func TestOPMLHandler_ImportStatus_Idle(t *testing.T) {
 
 	mockOPML := mock.NewMockOPMLService(ctrl)
 	mockTask := mock.NewMockImportTaskService(ctrl)
-	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask)
+	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask, writerLauncherFunc(launchTestWriter))
 
 	// Return nil for idle status
 	mockTask.EXPECT().Get().Return(nil).AnyTimes()
@@ -151,4 +152,27 @@ func (r *ioReaderCloser) Read(b []byte) (int, error) {
 	n := copy(b, r.s[r.i:])
 	r.i += n
 	return n, nil
+}
+
+func TestOPMLHandler_Import_AdmissionRejected(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockOPML := mock.NewMockOPMLService(ctrl)
+	mockTask := mock.NewMockImportTaskService(ctrl)
+	admissionErr := errors.New("admission closed")
+	h := handler.NewOPMLHandlerHelper(mockOPML, mockTask, writerLauncherFunc(func(context.Context, service.WriterClass, func(context.Context)) error {
+		return admissionErr
+	}))
+
+	e := newTestEcho()
+	req := newJSONRequest(http.MethodPost, "/opml/import", nil)
+	req.Body = &ioReaderCloser{s: `<?xml version="1.0"?><opml version="2.0"><body/></opml>`}
+	req.Header.Set("Content-Type", "application/xml")
+	c, rec := newTestContext(e, req)
+
+	err := h.Import(c)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+	require.JSONEq(t, `{"error":"internal error"}`, rec.Body.String())
 }

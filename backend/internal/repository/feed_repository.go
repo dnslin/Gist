@@ -33,15 +33,16 @@ type FeedRepository interface {
 }
 
 type feedRepository struct {
-	db dbtx
+	db        dbtx
+	generator snowflake.Generator
 }
 
-func NewFeedRepository(db dbtx) FeedRepository {
-	return &feedRepository{db: db}
+func NewFeedRepository(db dbtx, generator snowflake.Generator) FeedRepository {
+	return &feedRepository{db: db, generator: generator}
 }
 
 func (r *feedRepository) Create(ctx context.Context, feed model.Feed) (model.Feed, error) {
-	feed.ID = snowflake.NextID()
+	feed.ID = r.generator.NextID()
 	now := time.Now().UTC()
 	if feed.Type == "" {
 		feed.Type = "article"
