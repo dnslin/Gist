@@ -82,3 +82,76 @@ For every new or changed API endpoint or DTO, review and complete each applicabl
 - No static rule enforces layer boundaries, error wrapping, logging attributes, constructor injection, synchronization, path cleaning, lifecycle behavior, or test presence; review them against `.rules` and nearby source patterns.
 - Do not hand-maintain generated mocks or describe disabled linters and a coverage threshold as active gates.
 - `backend/pkg/snowflake/snowflake.go` holds a mutable package-level `node`, overwritten by `Init` and consumed by `NextID`; `backend/cmd/server/main.go` initializes it before repository use. This violates the `.rules` prohibition on non-configuration global state and constructor-injection requirement. Treat it as existing global-state debt, not an approved ID-generation pattern; new mutable package globals MUST NOT be introduced.
+
+---
+
+## Scenario: Unified Product Version
+
+### 1. Scope / Trigger
+
+Any product-version bump or build/release change touches the repository root, Go, Vite, generated Swagger metadata, and Docker. Root `VERSION` is the only manually maintained product version source; package metadata and code fallbacks are checked consumers.
+
+### 2. Signatures
+
+```sh
+bun scripts/version.ts [--root <repository>] [--tag vX.Y.Z] \
+  [--go-version X.Y.Z] [--vite-version X.Y.Z] [--docker-version X.Y.Z]
+```
+
+Go release builds inject `gist/backend/internal/config.AppVersion` with linker `-X`. Vite exposes the typed `__GIST_VERSION__` build constant. Docker accepts the required `VERSION` build argument and writes `org.opencontainers.image.version`.
+
+### 3. Contracts
+
+- `VERSION`: UTF-8 stable SemVer `X.Y.Z`, no `v`, prerelease, metadata, spaces, or additional lines; LF and CRLF endings are accepted.
+- `frontend/package.json`, Go fallback, Swagger source, `docs.go`, `swagger.json`, and `swagger.yaml` MUST equal `VERSION`.
+- Stable tags MUST equal `v` + `VERSION`.
+- `GistUserAgent` and `DefaultUserAgent` MUST derive from the final linker-injected `AppVersion`; runtime code MUST NOT read repository files.
+- Docker workflows MUST validate metadata and container smoke contracts before pushing an image.
+
+### 4. Validation & Error Matrix
+
+| Condition | Required result |
+|---|---|
+| Missing, empty, multiline, partial, `v`-prefixed, or prerelease `VERSION` | Validator exits nonzero |
+| Package, Go fallback, or any Swagger metadata differs | Validator exits nonzero |
+| Tag or supplied Go/Vite/Docker value differs | Validator exits nonzero |
+| Docker `VERSION` argument is empty | Docker build fails before application compilation |
+| OCI label, HTTP startup, or non-root server process check fails | Workflow MUST NOT push the image |
+
+### 5. Good/Base/Bad Cases
+
+- Good: `VERSION=1.2.0`, tag `v1.2.0`, every consumer reports `1.2.0`.
+- Base: local non-release Go and Vite builds use checked deterministic values without Git access.
+- Bad: deriving the version from a tag/package, embedding a second test expectation, or publishing before inspecting the built image.
+
+### 6. Tests Required
+
+- `bun test scripts/version.test.ts`: valid LF/CRLF input plus every invalid/drift case.
+- Go focused test with linker `-X`: assert `GistUserAgent` contains the injected value.
+- Frontend test: compare `productVersion` with root `VERSION`, never a copied literal.
+- Docker workflow: assert OCI label, `/api/auth/status`, and the `gist-server` process user before push.
+- Run `actionlint` after changing GitHub Actions workflows.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```yaml
+run: echo "value=$(bun scripts/version.ts)" >> "$GITHUB_OUTPUT"
+```
+
+`echo` can mask the validator's nonzero exit status.
+
+#### Correct
+
+```yaml
+run: |
+  VERSION="$(bun scripts/version.ts)"
+  echo "value=$VERSION" >> "$GITHUB_OUTPUT"
+```
+
+The assignment preserves command-substitution failure and stops the workflow.
+
+## Cross-Platform Persisted Path Contract
+
+Persisted icon paths MUST be portable single filenames, not host-native relative paths. Validation rejects both slash styles, colon-bearing drive/device syntax, absolute roots, `.` and `..`. Producers MUST normalize before persistence: IPv6 hostnames use the deterministic `ipv6-` plus hex-encoded hostname form. Tests MUST cover foreign-platform path syntax on the current host; `filepath.IsAbs` alone is insufficient because it only understands the host OS grammar.
