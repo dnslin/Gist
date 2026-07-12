@@ -1,0 +1,33 @@
+{
+  "id": "setup-matt-pocock-skills",
+  "name": "setup-matt-pocock-skills",
+  "title": "配置 Matt Pocock 工程技能",
+  "description": "",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": "cli",
+  "priority": "P2",
+  "creator": "dnslin",
+  "assignee": "dnslin",
+  "createdAt": "2026-07-12",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "lifecycle": {
+      "contract_version": 1,
+      "complexity": "lightweight",
+      "context_manifests_required": true,
+      "review_required": true
+    }
+  }
+}

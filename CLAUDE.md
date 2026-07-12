@@ -24,3 +24,17 @@ Managed by Trellis. Edits outside this block are preserved; edits inside may be 
 
 .rules
 you have to call me dnslin,You use Chinese to communicate with me and you use English to think.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in this repository's GitHub Issues using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical triage roles use their default label names. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Domain documentation uses a single-context layout with root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.

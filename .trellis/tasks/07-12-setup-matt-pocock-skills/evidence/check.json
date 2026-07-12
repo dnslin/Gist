@@ -1,0 +1,25 @@
+{
+  "schema": "trellis.check-evidence",
+  "version": 1,
+  "status": "passed",
+  "checked_at": "2026-07-12T13:06:38.427986+00:00",
+  "scope": [
+    "CLAUDE.md",
+    "docs/agents/issue-tracker.md",
+    "docs/agents/triage-labels.md",
+    "docs/agents/domain.md",
+    ".trellis/tasks/07-12-setup-matt-pocock-skills"
+  ],
+  "commands": [
+    {
+      "command": "git diff --check",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "focused trellis-check review of approved Markdown configuration and task manifests",
+      "status": "passed",
+      "exit_code": 0
+    }
+  ]
+}
