@@ -1,0 +1,9 @@
+{"file":".trellis/spec/backend/index.md","reason":"确认受影响 backend layer 与规范入口。"}
+{"file":".trellis/spec/backend/desktop-host-guidelines.md","reason":"检查 mutex thread affinity、activation completion、recovery durability 和 bootstrap contracts。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查 concurrency、resource cleanup、path matrix 和真实 process tests。"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"检查 protocol/recovery stable errors 与 path/secret redaction。"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查 recovery-before-db.Open 和 schema/migration 不变。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/prd.md","reason":"逐项回归原始 REQ/AC，防止通过改 spec 掩盖 defect。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/design.md","reason":"检查原始 IPC/durability/lock lifecycle design。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/evidence/check.json","reason":"检查 historical pass 与 pending external evidence 的处置。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/evidence/review.json","reason":"上一轮 canonical review 基线。"}

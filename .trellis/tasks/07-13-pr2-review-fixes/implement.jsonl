@@ -1,0 +1,9 @@
+{"file":".trellis/spec/backend/index.md","reason":"后端实现规范入口。"}
+{"file":".trellis/spec/backend/desktop-host-guidelines.md","reason":"Windows desktop paths、mutex、activation、recovery 与 bootstrap 的现行可执行合同。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"并发、资源生命周期、跨平台路径与黑盒测试规范。"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"稳定错误分类、wrap/unwrap 与敏感信息边界。"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"DACL helper 抽取与 byteReader 删除的复用决策。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/prd.md","reason":"原始 Child 03 requirements 与 acceptance，优先于后续弱化描述。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/design.md","reason":"原始 mutex、per-connection IPC、durable recovery 与 bootstrap 设计。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/implement.md","reason":"原始 fault/process/evidence validation contract。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-03-build-graph-desktop-paths-lock/reviews/phase-2.2-check.md","reason":"上一轮检查已修点和现有证据背景。"}
