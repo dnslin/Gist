@@ -1,1 +1,11 @@
-{"_example": "Fill with {\"file\": \"<path>\", \"reason\": \"<why>\"}. Put spec/research files only — no code paths. Run `python .trellis/scripts/get_context.py --mode packages` to list available specs. Delete this line once real entries are added."}
+{"file":".trellis/spec/backend/index.md","reason":"后端层入口；确认本任务适用 gist/backend 并加载具体规范。"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"约束 application.Runtime 唯一 composition root、server host 边界与 desktop dependency 隔离。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"约束构造注入、并发同步、跨平台持久化路径与黑盒测试质量。"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"约束锁与 recovery 必须先于 db.Open/migration，并保持 SQLite schema/driver 合同。"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"约束 desktop lock/recovery 日志使用统一 logger、结构化字段与敏感信息脱敏。"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"梳理 DesktopPaths→lock→journal→Runtime/SQLite 的跨层顺序与失败边界。"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"保证路径、object identity、IPC action 与 journal phase 只有一个所有者。"}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/research/current-project-baseline.md","reason":"提供现有 server/SQLite/Web/PWA/Docker 行为基线，防止 desktop 改动产生回归。"}
+{"file":".trellis/tasks/archive/2026-07/07-10-wails3-client-planning/research/wails3-technical-assessment.md","reason":"提供 Wails 构建隔离、版本 tuple 与 AssetServer 限制的已验证研究边界。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-02-shared-application-runtime/design.md","reason":"复用 Child 02 Runtime ownership、generator injection、lifecycle 与 Linux isolation 合同。"}
+{"file":".trellis/spec/backend/desktop-host-guidelines.md","reason":"Child 03 完成后形成的 Windows desktop paths、ownership、activation、recovery 与 bootstrap 可执行合同。"}

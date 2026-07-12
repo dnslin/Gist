@@ -1,0 +1,11 @@
+{
+  "schema": "trellis.spec-disposition",
+  "version": 1,
+  "status": "updated",
+  "recorded_at": "2026-07-12T14:52:09.140222+00:00",
+  "rationale": "Child 03 introduced reusable cross-layer infrastructure contracts for Windows desktop paths, Global mutex ownership, HKCU owner metadata, overlapped named-pipe activation, durable recovery journals, and lock-before-Runtime bootstrap ordering. Phase 2.2 also found non-obvious Windows API and durability pitfalls that future implementations must not repeat.",
+  "artifacts": [
+    ".trellis/spec/backend/desktop-host-guidelines.md",
+    ".trellis/spec/backend/index.md"
+  ]
+}

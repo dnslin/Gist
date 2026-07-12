@@ -1,0 +1,10 @@
+{
+  "schema": "trellis.review-evidence",
+  "version": 1,
+  "status": "passed",
+  "reviewed_at": "2026-07-12T14:40:53Z",
+  "axes": {
+    "standards": "passed",
+    "spec": "passed"
+  }
+}
