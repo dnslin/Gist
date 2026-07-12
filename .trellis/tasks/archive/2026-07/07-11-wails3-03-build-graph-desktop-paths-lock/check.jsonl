@@ -1,0 +1,12 @@
+{"file":".trellis/spec/backend/index.md","reason":"检查受影响后端层与规范入口是否完整。"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"检查 server/desktop 构建图、唯一 Runtime wiring 与依赖方向。"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查并发、路径、错误、外部黑盒测试与 race 质量。"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"检查 lock/recovery-before-db.Open、SQLite schema/migration 不变性。"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"检查 lock/recovery 错误日志字段和敏感信息脱敏。"}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"检查 bootstrap 各层输入输出、验证责任和失败传播。"}
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"检查路径/identity/protocol/state 常量未形成重复实现。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-01-windows-baseline-version/evidence/E-C01-PATH-CONTRACT.md","reason":"确认 server Windows 路径与环境变量合同未回归。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-02-shared-application-runtime/evidence/E-C02-SERVER-CONTRACT.md","reason":"确认 Runtime/server ownership、listener/env 与 dependency denylist 合同未回归。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-02-shared-application-runtime/evidence/E-C02-SNOWFLAKE.md","reason":"确认 desktop bootstrap 复用 injected generator 且失败先于 DB/writer。"}
+{"file":".trellis/tasks/archive/2026-07/07-11-wails3-02-shared-application-runtime/evidence/E-C02-WEB-SERVER-DOCKER-REGRESSION.md","reason":"作为 Web/PWA/server/Linux/Docker 回归基线。"}
+{"file":".trellis/spec/backend/desktop-host-guidelines.md","reason":"检查 Child 03 形成的完整 desktop host API、错误矩阵、OS 证据与禁止模式。"}

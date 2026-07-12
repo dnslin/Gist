@@ -1,0 +1,56 @@
+{
+  "schema": "trellis.check-evidence",
+  "version": 1,
+  "status": "passed",
+  "checked_at": "2026-07-12T14:40:53Z",
+  "scope": [
+    "backend/internal/desktop",
+    "backend/cmd/desktop",
+    "backend/internal/application/dependency_test.go",
+    ".trellis/tasks/07-11-wails3-03-build-graph-desktop-paths-lock/design.md",
+    ".trellis/tasks/07-11-wails3-03-build-graph-desktop-paths-lock/implement.md",
+    ".trellis/tasks/07-11-wails3-03-build-graph-desktop-paths-lock/evidence"
+  ],
+  "commands": [
+    {
+      "command": "go test ./internal/desktop/... ./cmd/desktop ./cmd/server ./internal/application ./internal/config ./internal/service -count=1",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "go test ./internal/desktop/ownership -run \"TestProcess|TestAbandoned|TestActivation\" -count=1 -v",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "go test ./internal/desktop/recovery -run \"TestCrash|TestDurable|TestJournalState|TestRollbackRequired\" -count=1 -v",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "go test ./cmd/server ./internal/application -run \"TestServerDependencies|TestLinuxDependencyClosure\" -count=1 -v",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "go build ./...",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build ./...",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "python .trellis/scripts/task.py validate .trellis/tasks/07-11-wails3-03-build-graph-desktop-paths-lock",
+      "status": "passed",
+      "exit_code": 0
+    },
+    {
+      "command": "python .trellis/scripts/task.py validate-lifecycle .trellis/tasks/07-11-wails3-03-build-graph-desktop-paths-lock completion --allow-legacy",
+      "status": "passed",
+      "exit_code": 0
+    }
+  ]
+}

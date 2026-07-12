@@ -106,3 +106,37 @@ Extracted the platform-neutral application Runtime, injected instance Snowflake 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Complete Wails3 Child 03 desktop ownership foundation
+
+**Date**: 2026-07-12
+**Task**: Complete Wails3 Child 03 desktop ownership foundation
+**Package**: cli
+**Branch**: `feat/wails3-build-graph-desktop-paths-lock`
+
+### Summary
+
+Planned, implemented, checked, documented, committed, and archived the Windows desktop build boundary, DesktopPaths, cross-session data ownership mutex, activation IPC, durable RecoveryJournal, and lock-before-Runtime bootstrap. Focused Windows tests, process fixtures, Windows build, Linux cross-build, dependency guards, lifecycle completion gate, and spec update passed; second Terminal Services session, native Linux/Docker/race, and rollback drill remain explicitly external evidence requirements.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `98f17c1cf81dc2af2ecb8dd997856717c466d948` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

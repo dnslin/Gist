@@ -1,0 +1,33 @@
+{
+  "id": "pr2-review-fixes",
+  "name": "pr2-review-fixes",
+  "title": "Fix PR 2 code review findings",
+  "description": "",
+  "status": "planning",
+  "dev_type": null,
+  "scope": "backend",
+  "package": "cli",
+  "priority": "P2",
+  "creator": "dnslin",
+  "assignee": "dnslin",
+  "createdAt": "2026-07-13",
+  "completedAt": null,
+  "branch": "feat/wails3-build-graph-desktop-paths-lock",
+  "base_branch": "feat/wails3-build-graph-desktop-paths-lock",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "lifecycle": {
+      "contract_version": 1,
+      "complexity": "lightweight",
+      "context_manifests_required": true,
+      "review_required": true
+    }
+  }
+}

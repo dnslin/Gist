@@ -19,6 +19,7 @@ This directory records the conventions currently visible in the Go backend under
 | [Error Handling](./error-handling.md) | Error types, propagation, and HTTP mapping | Filled |
 | [Quality Guidelines](./quality-guidelines.md) | Enforced tooling and test patterns | Filled |
 | [Logging Guidelines](./logging-guidelines.md) | Structured logging and observed log levels | Filled |
+| [Desktop Host Guidelines](./desktop-host-guidelines.md) | Windows desktop paths, ownership, activation, recovery, and bootstrap contracts | Filled |
 
 ---
 
