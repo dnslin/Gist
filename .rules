@@ -138,3 +138,17 @@
 - Handler 中使用 swag 注解定义 API 规范
 - 修改后运行：`swag init -g cmd/server/main.go --parseDependency --parseInternal`
 </important>
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked in GitHub Issues for `dnslin/Gist`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+This repo uses the five default canonical triage labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repo uses a single-context layout. See `docs/agents/domain.md`.
