@@ -12,7 +12,7 @@
 | `reader-workspace` | 原样复用现有阅读 UI、样式、Hooks 和 Query 行为 | — |
 | `connection` | Gist 服务地址、登录与会话恢复；只连接已初始化的服务 | `desktop-shell` |
 | `reading` | 导航数据、未读数、文章列表、正文、图片模式、已读、收藏与桌面原文窗口 | `connection`, `reader-workspace` |
-| `library` | 添加、编辑、删除订阅和文件夹，执行刷新 | `connection`, `reader-workspace` |
+| `library` | 添加、编辑和删除订阅；订阅时创建文件夹，修改文件夹类型或删除文件夹；执行全部刷新 | `connection`, `reader-workspace` |
 | `content-tools` | Readability、AI 摘要、翻译和批量翻译 | `connection`, `reader-workspace` |
 | `settings-profile` | 用户资料、通用设置、外观设置、网络设置和 AI 设置 | `connection`, `reader-workspace` |
 | `data-transfer` | OPML 导入、进度、取消和导出 | `connection`, `reader-workspace` |
