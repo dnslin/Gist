@@ -14,7 +14,7 @@
 | `reading` | 导航数据、未读数、文章列表、正文、图片模式、已读、收藏与桌面原文窗口 | `connection`, `reader-workspace` |
 | `library` | 添加、编辑和删除订阅；订阅时创建文件夹，修改文件夹类型或删除文件夹；执行全部刷新 | `connection`, `reader-workspace` |
 | `content-tools` | Readability、AI 摘要、翻译和批量翻译 | `connection`, `reader-workspace` |
-| `settings-profile` | 用户资料、通用设置、外观设置、网络设置和 AI 设置 | `connection`, `reader-workspace` |
+| `settings-profile` | 用户资料、通用、外观、网络、AI 与高级设置，以及设置页中的文章、图标和 Anubis 清理 | `connection`, `reader-workspace` |
 | `data-transfer` | OPML 导入、进度、取消和导出 | `connection`, `reader-workspace` |
 
 ## 构建顺序
