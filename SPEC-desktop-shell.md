@@ -1,6 +1,7 @@
 # Spec: desktop-shell
 
 > 状态：Approved（2026-08-29）
+> 修订：2026-08-30，与 `reading` 已确认的单一原文窗口对齐
 > Module ID：`desktop-shell`
 > 来源：[`CAPABILITY-MAP.md`](./CAPABILITY-MAP.md)
 
@@ -11,7 +12,7 @@
 完成本 Spec 后，项目应当具备：
 
 - 一个可在 Windows、macOS 和 Linux 上原生构建与运行的桌面工程。
-- 一个使用系统原生边框的单一主窗口。
+- 一个使用系统原生边框的主窗口；应用启动时只创建该主窗口。
 - 一条独立于 Web/PWA 构建的桌面前端构建链路。
 - 开发模式下的前端热更新和 Go 代码重编译。
 - 生产构建时嵌入可执行文件的前端静态资源。
@@ -28,7 +29,8 @@
 - 应用名称为 `Gist`，Go module 为 `github.com/dnslin/Gist/desktop`。
 - 主窗口使用系统标题栏和系统窗口按钮，不实现自定义标题栏。
 - 主窗口初始尺寸为 `1440 × 900`，可调整大小并在首次打开时居中。
-- 关闭唯一主窗口后，应用进程退出，不驻留后台。
+- `desktop-shell` 本身只创建主窗口。后续 `reading` 可以在用户打开外部链接时，按需创建最多一个可复用的原文窗口。
+- 关闭原文窗口不影响主窗口；关闭主窗口后应用进程退出，并结束仍打开的原文窗口。
 
 选择 `1440 × 900` 是为了让首次打开宽度超过现有 UI 的 `1366px` 桌面断点。窗口仍可缩小，现有响应式布局负责小尺寸显示。
 
@@ -144,7 +146,7 @@ wails3 build
 desktop/
 ├── go.mod                     # 独立的桌面 Go module
 ├── go.sum
-├── main.go                    # Wails 应用与唯一主窗口
+├── main.go                    # Wails 应用启动与主窗口
 ├── Taskfile.yml               # Wails 开发和构建入口
 ├── build/
 │   ├── config.yml             # Gist 产品与二进制元数据
@@ -217,7 +219,7 @@ Wails `v3.0.0-beta.12` 的默认任务假定 `package.json` 位于 Wails 工程�
 ### Go
 
 - 使用 `gofmt`。
-- `main.go` 只负责创建应用、配置资产、创建主窗口和运行应用。
+- 在只实施本模块时，`main.go` 只负责创建应用、配置资产、创建主窗口和运行应用。后续已批准的 capability 可以注册自己的具体 service 与最小生命周期调用点。
 - 没有第二个调用点时，不提前建立接口、工厂层或配置抽象。
 - 运行失败必须返回非零退出状态并保留原始错误信息。
 
@@ -246,6 +248,8 @@ if err := app.Run(); err != nil {
 	log.Fatal(err)
 }
 ```
+
+该示例只表示尚未接入 `reading` 时的初始外壳。加入原文窗口后，不能只依赖 `ApplicationShouldTerminateAfterLastWindowClosed`，因为原文窗口仍打开时，主窗口不是“最后一个窗口”。届时必须在主窗口关闭事件中明确退出应用；具体 Wails beta.12 回调写法在实施时以实际 API 为准，不在本 Spec 中凭假设固定。
 
 ### TypeScript / React
 
@@ -280,7 +284,7 @@ export function DesktopShell() {
 在至少一个当前开发环境中执行：
 
 1. 运行 `wails3 dev`。
-2. 确认只打开一个名为 `Gist` 的原生窗口。
+2. 确认启动时只打开一个名为 `Gist` 的原生主窗口。
 3. 确认窗口初始尺寸、调整大小和居中行为符合本 Spec。
 4. 确认窗口显示最小桌面入口，而不是空白页。
 5. 修改入口内容，确认前端热更新生效。
@@ -290,7 +294,7 @@ export function DesktopShell() {
 
 1. 运行 `wails3 doctor`。
 2. 运行 `wails3 build` 并启动 `desktop/bin/` 中的产物。
-3. 确认只打开一个名为 `Gist` 的原生窗口，初始尺寸为 `1440 × 900`，可调整大小。
+3. 确认启动时只打开一个名为 `Gist` 的原生主窗口，初始尺寸为 `1440 × 900`，可调整大小。
 4. 在 Gist 服务未运行时，确认内嵌入口仍能显示。
 5. 关闭主窗口，确认应用进程退出。
 6. 确认生产进程没有启动 Gist 服务，也没有监听应用自建的 HTTP 端口。
@@ -301,7 +305,7 @@ export function DesktopShell() {
 
 - Wails CLI、Go module 以及实际使用的 Wails 前端 runtime 保持在 `v3.0.0-beta.12`。
 - 保持现有 Web 构建、Docker 静态资源目录和 Web/PWA 测试不变。
-- 保持单主窗口、系统原生边框、可调整大小和关闭即退出。
+- 始终只有一个主窗口；后续 `reading` 只可按需增加最多一个原生原文窗口。窗口使用系统原生边框并可调整大小，关闭主窗口即退出应用。
 - 桌面生产构建只使用嵌入静态资源，不依赖 Vite 或外部前端服务器。
 - 生成物与二进制必须被 Git 忽略。
 - 只实现本模块验收所需的最小代码。
@@ -311,7 +315,8 @@ export function DesktopShell() {
 - 改变 `desktop/` 或现有 `frontend/` 的所有权边界。
 - 升级 Wails、Go、React、TypeScript、Vite 或 Bun 依赖。
 - 增加新的生产依赖。
-- 改变应用名称、module path、窗口数量、尺寸或窗口边框。
+- 改变应用名称、module path、主窗口数量、尺寸或窗口边框。
+- 增加第二个原文窗口、其他类型窗口、分栏、页签、地址栏或浏览器历史。
 - 添加平台专属业务逻辑。
 - 修改 `backend/`、Docker 或现有 Web/PWA 行为。
 - 新增或修改 GitHub Actions。
@@ -333,9 +338,9 @@ export function DesktopShell() {
 - [ ] `desktop/` 是独立 Wails 工程，Go module 为 `github.com/dnslin/Gist/desktop`。
 - [ ] `desktop/go.mod` 精确依赖 Wails `v3.0.0-beta.12`。
 - [ ] `wails3 version` 输出 `v3.0.0-beta.12`。
-- [ ] `wails3 dev` 启动一个原生、可调整大小的 `Gist` 主窗口。
+- [ ] `wails3 dev` 启动时只创建一个原生、可调整大小的 `Gist` 主窗口。
 - [ ] 主窗口初始为 `1440 × 900`，可调整大小，首次打开时居中。
-- [ ] 关闭主窗口后进程退出，不驻留后台。
+- [ ] 关闭主窗口后进程退出，不驻留后台；后续原文窗口存在时也遵守这一行为。
 - [ ] 开发模式支持前端热更新。
 - [ ] `bun run build:desktop` 输出 `desktop/frontend/dist/index.html`。
 - [ ] `bun run verify:desktop-assets` 在桌面构建后通过。

@@ -1,6 +1,7 @@
 # Spec: connection
 
 > 状态：Approved（2026-08-30）
+> 修订：2026-08-30，允许后续已批准 capability 增加具体 Wails service binding
 > Module ID：`connection`
 > 来源：[`CAPABILITY-MAP.md`](./CAPABILITY-MAP.md)
 
@@ -364,7 +365,7 @@ wails3 generate bindings -d ../frontend/bindings -clean=true -ts
 
 要求：
 
-- 只为实际注册的 `ConnectionService` 生成 bindings。
+- 为当前实际注册的具体 Wails services 生成 bindings。本模块独立实施时只有 `ConnectionService`；后续 `reading` 可以增加已批准的 `OriginalPageService`，但不得改变 connection 的代理、凭据或会话边界。
 - 输出目录固定为仓库 `frontend/bindings/`。
 - `frontend/tsconfig.app.json` 纳入生成目录或其被桌面源码引用的文件。
 - `@wailsio/runtime` 精确锁定 `3.0.0-beta.12`，不使用 `latest`。
