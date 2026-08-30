@@ -192,7 +192,7 @@ Wails 默认模板中的示例服务、定时事件、示例 React 应用、移�
 - 不启动现有 `App`，因此不会请求相对路径 `/api`。
 - 不改变 `bun run build` 的 Web/PWA 行为。
 
-桌面入口暂时只渲染能够识别资源加载成功的最小内容。`reader-workspace` 获得批准后，再由它接入现有阅读 UI。
+桌面入口暂时只渲染能够识别资源加载成功的最小内容。`reader-workspace` 只建立共享 UI 入口；等 `connection` 配置服务地址并建立有效会话后，桌面宿主才挂载该工作区。
 
 ## Wails Taskfile Contract
 
