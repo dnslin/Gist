@@ -112,9 +112,23 @@ describe("DesktopShell", () => {
     expect(
       desktopEntryImports.filter((specifier) => specifier.endsWith(".css")),
     ).toEqual(["../index.css"]);
-    expect(desktopHtmlSource).toContain(
-      '<script type="module" src="../src/desktop/main.tsx"></script>',
+    const desktopHtmlDocument = new DOMParser().parseFromString(
+      desktopHtmlSource,
+      "text/html",
     );
+    expect(
+      Array.from(desktopHtmlDocument.scripts, (script) => ({
+        type: script.getAttribute("type"),
+        src: script.getAttribute("src"),
+        content: script.textContent?.trim() ?? "",
+      })),
+    ).toEqual([
+      {
+        type: "module",
+        src: "../src/desktop/main.tsx",
+        content: "",
+      },
+    ]);
 
     expect(desktopEntrySource).not.toMatch(/\bApp\b/);
     expect(desktopEntrySource).not.toMatch(/UpdateNotice|update-notice/);
