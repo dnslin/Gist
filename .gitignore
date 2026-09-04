@@ -11,5 +11,8 @@ Thumbs.db
 # direnv
 .direnv
 
+# Desktop frontend build output
+/desktop/frontend/dist/
+
 # pre-commit
 .pre-commit-config.yaml
