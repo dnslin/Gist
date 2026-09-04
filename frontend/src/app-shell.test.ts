@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 
 describe("app shell viewport sizing", () => {
   const appSource = readFileSync("src/App.tsx", "utf8");
+  const workspaceSource = readFileSync(
+    "src/components/reader-workspace/ReaderWorkspace.tsx",
+    "utf8",
+  );
   const cssSource = readFileSync("src/index.css", "utf8");
 
   it("wraps the app in a fixed-height shell", () => {
@@ -21,13 +25,13 @@ describe("app shell viewport sizing", () => {
     expect(cssSource).toContain("min-height: var(--app-dvh);");
     expect(cssSource).toContain("overflow-y: auto;");
     expect(cssSource).toContain("mobile-document-scroll-locked");
-    expect(appSource).toContain(
+    expect(workspaceSource).toContain(
       "const usesMobileDocumentScroll = isMobile && !isAddFeedPath(location)",
     );
   });
 
   it("does not change root overflow when the mobile sidebar opens", () => {
-    expect(appSource).toContain(
+    expect(workspaceSource).toContain(
       'locked: usesMobileDocumentScroll && mobileView === "detail"',
     );
   });
